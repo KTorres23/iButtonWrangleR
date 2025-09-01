@@ -1,0 +1,597 @@
+---
+title: "iButtonWrangleR: Automate iButton Data Processing"
+format: html
+---
+
+iButton data should be stored in folders by their plots. The following convention is used: plot_PLOTNUMBER_DEPLOYDATE_PICKUPDATE The following is an example of a folder name following the convention: plot_1a_0630-0702
+
+**NOTE**: This script was designed for humidity and temperature data. If other data types are present, exercise caution in that they are processed correctly by the functions in this script.
+
+# Environment Set-up
+
+```{r setup, include=FALSE}
+
+# Install necessary packages if not already installed
+install.packages(c("pacman", "tidyverse", "readxl", "here"))
+#"MuMIn", "performance", "easystats")
+
+# General packages
+pacman::p_load(tidyverse, readxl, here)
+
+# Set working directory to project root
+setwd(here())
+
+```
+
+# FX: Extract Raw Data
+
+***Internal function for running other functions in this script***
+
+**Function name:** ibutton_extract_raw
+
+**Function output:** returns a dataframe of the metadata and a list of the raw data
+
+**Function arguments:** `filepath`, `folder_name`
+
+-   `filepath` is the path to an .xlsx iButton logger file
+-   `folder_name` is an optional argument to specify the folder name (plot name) where the iButton file is located; if NULL, it will not be included in the metadata
+
+```{r function_ibutton_extract_raw}
+
+# --- F(x): Wrangle a file of raw iButton data ----
+ibutton_extract_raw <- function(filepath, folder_name = NULL) {
+  
+  # Read in everything (no header)
+  all_data <- suppressMessages(as.data.frame(read_excel(filepath, col_names = FALSE)))
+  
+  # Find the row where main iButton data field names begin
+  data_row <- which(all_data[[1]] == "Date" & all_data[[2]] == "Time" & all_data[[3]] == "Value")
+  
+  # Throw error if necessary
+  if (length(data_row) == 0) stop("Data row with headers not found")
+  
+  # Get metadata for logger, which is everything before the header row (extracted above)
+  meta_raw <- all_data[1:(data_row - 1), , drop = FALSE]
+  
+  # Remove blank rows
+  meta_raw <- meta_raw[rowSums(is.na(meta_raw)) < ncol(meta_raw), ]
+  
+
+    
+  # Wrangle metadata
+  # Some keys in col1, some possible values in col3, col2
+  meta <- meta_raw %>%
+    select(1:3) %>%
+    setNames(c("key", "blank", "value")) %>%
+    filter(!is.na(key), key != "NA", !str_detect(key, "^NA$")) %>%
+    filter(!(key == value & key != "NA"))  # Remove empty rows
+    
+  # Collapse by: key = key, value = 3rd col if present, else col2
+  meta <- suppressMessages(
+    meta %>%
+    mutate(
+      key = str_remove(key, ":$"), # Remove colon at end
+      key = str_replace_all(key, "\\s+", "_"), # Replace spaces with underscores,
+      key = tolower(key), # Convert to lowercase
+      key = str_remove(key, "\\?$"), # Remove question mark at end
+      val_final = case_when(!is.na(value) & value != "NA" ~ value,
+                            !is.na(blank) & blank != "NA" ~ blank,
+                            TRUE ~ NA_character_)
+    ) %>%
+    select(key, val_final)
+  )
+
+  # In case keys are duplicated, only keep first
+  meta <- meta %>%
+    filter(!duplicated(key)) %>%
+    tibble::deframe()
+  
+  # Add folder name to metadata
+  if (!is.null(folder_name)) {
+    meta[["folder_name"]] <- folder_name
+  }
+  
+  metadata <- as.data.frame(t(meta), stringsAsFactors = FALSE)
+  
+
+    
+  # Wrangle main data (collected microclimatic values) 
+  data_df <- all_data[(data_row + 1):nrow(all_data), 1:3, drop = FALSE]
+  names(data_df) <- c("Date", "Time", "Value")
+  data_df <- data_df %>%
+    filter(!is.na(Date), !is.na(Time), !is.na(Value)) %>%
+    mutate(value = as.numeric(Value),
+           date_time = paste(Date, Time),
+           date_time = ymd_hms(date_time, tz = "EST")) %>% 
+    select(date_time, value)
+  
+  return(list(metadata = metadata, data = data_df))
+  
+}
+
+```
+
+# Read files -----------------------
+
+## FX: Read Batch of Files
+
+**Function name:** ibutton_read_batch
+
+**Function output:** list of each iButton logger/plot and its respective data and metadata
+
+**Function arguments:** `paths_or_parent`, `auto_list_subfolders`
+
+-   `paths_or_parent` is either a vector of folder paths or a single parent folder path, where each folder contains iButton logger data files
+
+-   See **Sample Usage** below for more details
+
+-   `auto_list_subfolders` is a logical value to automatically list subfolders within a parent folder (TRUE) or not (FALSE, by default)
+
+```{r function_ibutton_read_batch}
+
+# Paths is a vector of folder paths or a single folder path
+ibutton_read_batch <- function(paths_or_parent, auto_list_subfolders = FALSE) {
+
+  
+    # --- F(x) Extract data type from the iButton metadata of an Excel file ---
+    get_datatype_from_meta <- function(result_element) {
+      data_unit <- result_element$metadata$data_unit
+      
+      if(is.null(data_unit) || data_unit == "NA") {
+        return(NULL)
+      } else if (data_unit == "%RH") {
+        return("humidity")
+      } else if (data_unit == "degrees C") {
+        return("temperature")
+      } else {
+        print(paste("Unknown data unit:", data_unit))
+        return(data_unit)
+      }
+    }
+     
+  
+  
+  # --- F(x) Read all Excel files within a folder ---
+  read_folder <- function(folder_path) {
+    
+    folder_name <- basename(folder_path)
+
+    # List Excel files inside folder
+    files <- list.files(path = folder_path, pattern = "\\.xlsx?$", full.names = TRUE)
+    
+    # Read all files and process
+    results <- purrr::map(files, ~ {
+      tryCatch(
+        ibutton_extract_raw(.x, folder_name = folder_name),
+        error = function(e) {
+          warning(paste("Error reading file:", .x, ":", e$message))
+          NULL
+        }
+      )
+    })
+    
+    
+    
+    # Remove NULLs from errors
+    results <- purrr::compact(results)
+    
+    
+    # Assign names to the list of Excel files based on metadata
+    names_vec <- purrr::map_chr(results, ~ {
+      
+      data_type <- get_datatype_from_meta(.x)
+      
+      if (is.null(data_type) || data_type == "") {
+        # fallback name using basename of file without extension if metadata missing
+        file_base <- tools::file_path_sans_ext(basename(.x$source_file %||% NA))
+        
+        if (is.na(file_base)) {
+          file_base <- paste0("file_", sample(10000:99999, 1))  # random fallback
+        }
+        data_type <- file_base
+      }
+      data_type
+    })
+    
+    names(results) <- names_vec
+
+    return(results)
+  }
+
+  
+  # --- F(x) Get list of paths of all subfolders within a parent folder ---
+  get_subfolder_paths <- function(parent_folder) {
+    list.dirs(path = parent_folder, recursive = FALSE, full.names = TRUE)
+  }
+  
+  # Determine folders to process
+  if (auto_list_subfolders && length(paths_or_parent) == 1) {
+    paths <- get_subfolder_paths(paths_or_parent) # For folders within folders
+  } else {
+    paths <- paths_or_parent # For single files or list of folders
+  }
+  
+  # Read all iButton data from folders & files
+  if(length(paths) == 1) {
+    # If a single folder, return the list of data from that folder
+    read_folder(paths)
+  } else {
+    # If multiple folders, return named list of results by folder
+    purrr::set_names(paths, basename(paths)) %>%
+      purrr::map(read_folder)
+  }
+}
+
+```
+
+### Sample usage
+
+```{r example_ibutton_read_batch}
+
+# Example 1: Running a single plot/folder
+# - A string of the path to the single plot/logger
+# - auto_list_subfolders = FALSE (by default)
+ibutton_folder <- here("sample_data", "plot_1a_0630-0702")
+one_data <- ibutton_read_batch(ibutton_folder)
+
+
+# Example 2: Running multiple single plots/folders
+# - A vector or list of folder paths of strings where the folders are individual plots/loggers 
+# - auto_list_subfolders = FALSE (by default)
+list_folders <- c(
+  here("sample_data", "plot_1a_0630-0702"),
+  here("sample_data", "plot_1b_0704-0707"),
+  here("sample_data", "plot_1c_0714-0716")
+)
+three_data <- ibutton_read_batch(list_folders)
+
+
+# Example 3: Running multiple plots/folders within a parent folder
+# - A string of the parent folder path, where the subfolders will be automatically iterated and listed in the function (must set auto_list_subfolders = TRUE)
+# - if TRUE is not specified, function does NOT work
+ibutton_folders <- here("sample_data")
+all_data <- ibutton_read_batch(ibutton_folders, TRUE)
+
+```
+
+## FX: Read Single File
+
+**Function name:** ibutton_read_file
+
+**Function output:** list of the data and dataframe of the metadata associated with a single iButton logger file
+
+**Function arguments:** `file_path`
+
+-   `file_path` requires path to an .xlsx iButton logger file
+
+```{r function_ibutton_read_file}
+
+# --- Function: Read a single iButton file 
+ibutton_read_file <- function(file_path) {
+  folder_name <- basename(dirname(file_path))  # Get folder name from file path
+  ibutton_extract_raw(file_path, folder_name = folder_name)
+}
+
+```
+
+### Sample usage
+
+```{r example_ibutton_read_file}
+
+# Example usage of read_single_ibutton_file function
+with(ibutton_read_file(here("sample_data", "plot_1a_0630-0702/40000000823D6A41_063025175201_1.xlsx")), {
+  single_data <<- data
+  single_metadata <<- metadata
+})
+
+# Or simply:
+my_data <- ibutton_read_file(here("sample_data", "plot_1a_0630-0702/40000000823D6A41_063025175201_1.xlsx"))
+single_data <- my_data$data
+single_metadata <- my_data$metadata
+
+
+```
+
+## FX: Read User Dates/Times
+
+**Function name:** ibutton_read_datetimes
+
+**Function output:** named list with plots and respective desired start/end dates and times
+
+**Function arguments:** `file_path`
+
+-   `file_path` is the path to a CSV file with columns: plot_number, start_date, end_date
+
+```{r function_ibutton_read_datetimes}
+
+# --- F(x): Read start and end dates for filtering iButton data ---
+ibutton_read_datetimes <- function(file_path) {
+  
+  # Read CSV
+  date_ranges_df <- read.csv(file_path, stringsAsFactors = FALSE)
+  
+  # Convert start_date and end_date to POSIXct
+  date_ranges_df$start_date <- as.POSIXct(date_ranges_df$start_date, tz = "EST")
+  date_ranges_df$end_date <- as.POSIXct(date_ranges_df$end_date, tz = "EST")
+
+  # Convert to named lists
+  start_dates <- setNames(date_ranges_df$start_date, date_ranges_df$plot_number)
+  end_dates <- setNames(date_ranges_df$end_date, date_ranges_df$plot_number)
+  
+  # Return a list of start and end dates
+  return(list(start_dates = start_dates, end_dates = end_dates))
+}
+
+```
+
+### Sample usage
+
+```{r example_ibutton_read_datetimes}
+
+# Example usage of ibutton_read_datetimes function
+user_dates <- ibutton_read_datetimes("date_ranges.csv")
+start_dates <- as.list(user_dates$start_dates)
+end_dates <- as.list(user_dates$end_dates)
+
+# Another way to specify start and end dates is
+# to manually specify them as named lists:
+start_dates = list(
+  "plot_1a_0630-0702" = as.POSIXct("2025-06-30 17:12:01 EST"),
+  "plot_1b_0704-0707" = as.POSIXct("2025-07-04 20:46:01 EST")
+)
+end_dates = list(
+  "plot_1a_0630-0702" = as.POSIXct("2025-07-02 06:12:01 EST"),
+  "plot_1b_0704-0707" = as.POSIXct("2025-07-07 02:46:01 EST")
+)
+
+```
+
+# View data -----------------------
+
+## FX: View iButton Metadata
+
+**Function name:** ibutton_view_metadata
+
+**Function output:** text output of the metadata contained within an iButton logger file
+
+**Function arguments:** `data`, `data_type`, `name`, `multiple`
+
+-   `data` can be a nested list of loggers/plots or a single logger/plot
+-   `data_type` is either "temperature" or "humidity"
+-   If the data is a list of multiple loggers/plots:
+    -   `name` is the name of the folder/plot/logger that needs to be viewed
+    -   `multiple` should be set to TRUE
+
+```{r function_ibutton_view_metadata}
+
+# --- F(x): View iButton metadata ---
+ibutton_view_metadata <- function(data, data_type = NULL,
+                                  name = NULL, multiple = FALSE) {
+  data_type <- tolower(data_type)
+  name <- tolower(name)
+  
+  data_types <- c("temp", "temperature", "humd", "humidity")
+  
+  if (is.null(data_type) || !(data_type %in% data_types)) {
+    stop("Data type must be specified")
+  }
+
+  ## Check if data is a nested list that would contain metadata
+  if (!is.list(data)) {
+    stop("Data must be a list.")
+  } else if (multiple && !is.null(name) && (name %in% names(data))) { # Check if multiple loggers
+    metadata <- data[[name]][[data_type]]$metadata
+  } else { # Use for single logger
+    metadata <- data[[data_type]]$metadata
+  }
+  
+  
+  # Convert metadata to a data frame for better viewing
+  metadata_df <- as.data.frame(metadata, stringsAsFactors = FALSE)
+  
+  # Print the metadata
+  print(metadata_df)
+}
+
+
+```
+
+### Sample usage
+
+```{r example_ibutton_view_metadata}
+
+# Example usage of ibutton_view_metadata function
+
+# If a dataframe contains multiple loggers and folders,
+# the "name" and "multiple" args MUST be specified
+ibutton_view_metadata(data = all_data, data_type = "temperature",
+                      name = "plot_1a_0630-0702", multiple = TRUE) 
+
+# If a dataframe contains a single logger/plot,
+# the "name" and "multiple" args are NOT required
+ibutton_view_metadata(data = one_data, data_type = "humidity",
+                      name = NULL, multiple = FALSE)
+
+```
+
+# Filter data -----------------------
+
+## FX: Filter iButton Data
+
+**Function name:** ibutton_filter_data
+
+**Function output:** Dataframe with cleaned iButton data (can be combined into a single dataframe or a list of dataframes by plot)
+
+**Function arguments:** `data`, `data_types`, `start_date`, `end_date`, `min_temp`, `max_temp`, `min_humidity`, `max_humidity`, `bind_rows`
+
+-   `data` can be a nested list of loggers/plots or a single logger/plot
+-   `data_types` is a character vector for specifying data types collected by the logger, where "temperature" and "humidity" are included by default
+-   `start_date` & `end_date` is a named list of POSIXct data types
+-   `min_temp` & `max_temp` are numeric values for filtering temperature
+-   `min_humidity` & `max_humidity` are numeric values for filtering humidity (0-100 by default)
+-   `bind_rows` is a logical value to combine all data into a single data frame (TRUE by default) or return a list of data frames by plot (FALSE)
+
+```{r function_ibutton_filter_data}
+
+# --- F(x): Filter iButton data ---
+ibutton_filter_data <- function(data, data_types = c("temperature", "humidity"),
+                                start_date = NULL, end_date = NULL,
+                                min_temp = NULL, max_temp = NULL,
+                                min_humidity = 0, max_humidity = 100,
+                                bind_rows = TRUE) {
+
+  # --- F(x) Extract and filter one data type ("temperature" or "humidity")
+  extract_and_filter <- function(data_type_list, data_type_name, sd, ed) {
+    metadata <- data_type_list$metadata
+    data <- data_type_list$data
+    
+    # Initialize filtered data to full dataset
+    filtered_data <- data
+
+    
+    # Filter by user-supplied date ed, if given
+    if (!is.null(sd) && !is.null(ed)) {
+      filtered_data <- filtered_data %>%
+        filter(date_time >= as.POSIXct(sd) & date_time <= as.POSIXct(ed))
+    } else {
+      # Use full range in data if no date range specified
+      sd <- min(filtered_data$date_time, na.rm = TRUE)
+      ed <- max(filtered_data$date_time, na.rm = TRUE)
+    }
+    
+    
+    # Filter by temperature or humidity depending on data_type_name
+    if (data_type_name == "temperature") {
+      if (!is.null(min_temp)) {
+        filtered_data <- filtered_data %>% filter(value >= min_temp)
+      }
+      if (!is.null(max_temp)) {
+        filtered_data <- filtered_data %>% filter(value <= max_temp)
+      }
+      # Remove any negative values for temperature just in case
+      filtered_data <- filtered_data %>% filter(value >= 0)
+      
+    } else if (data_type_name == "humidity") {
+      if (!is.null(min_humidity)) {
+        filtered_data <- filtered_data %>% filter(value >= min_humidity)
+      }
+      if (!is.null(max_humidity)) {
+        if (max_humidity < 100) {
+          # Filter out values greater than max_humidity
+          filtered_data <- filtered_data %>% filter(value <= max_humidity)
+        } else if (max_humidity == 100) {
+          # Cap value at 100
+          filtered_data <- filtered_data %>% mutate(value = pmin(value, 100))
+        }
+      }
+      # Remove negative humidity values
+      filtered_data <- filtered_data %>% filter(value >= 0)
+    }
+    
+    
+    # Add metadata columns
+    filtered_data <- filtered_data %>%
+      mutate(
+        plot_number = metadata$folder_name,
+        device_number = metadata$device_serial_number,
+        mission_start = as.POSIXct(metadata$mission_start_time, tz = "EST"),
+        #mission_start = as.POSIXct(metadata$mission_start_time,
+        #                           format = "%Y-%m-%d %H:%M:%S UTC%z",
+        #                           tz = "EST"),
+        user_start = as.POSIXct(sd, tz = "EST"),
+        user_end = as.POSIXct(ed, tz = "EST")
+      ) %>%
+      rename(!!data_type_name := value)  # Rename value column to data_type
+    
+
+    return(filtered_data)
+  }
+  
+  
+  # --- F(x) Wrangle all data within a folder ---
+  filter_plot <- function(plot_data, plot_name, start_date, end_date) {
+
+    # Assign user-specified start/end date/time, if specified
+    sd <- if (!is.null(start_date) && !is.null(start_date[[plot_name]])) {
+      start_date[[plot_name]]
+    } else { # fallback to earliest date in all data
+      min(plot_data$temperature$data$date_time, na.rm=TRUE)
+    }
+
+    ed <- if (!is.null(end_date) && !is.null(end_date[[plot_name]])) {
+      end_date[[plot_name]]
+    } else { # fallback to latest date in all data
+      max(plot_data$temperature$data$date_time, na.rm=TRUE)
+    }
+
+
+    # Extract and filter temperature and humidity data frames
+    temp_df <- extract_and_filter(plot_data$temperature, "temperature", sd, ed)
+    hum_df <- extract_and_filter(plot_data$humidity, "humidity", sd, ed)
+
+    
+    # Merge temperature and humidity by date_time and metadata columns
+    merged_df <- full_join(temp_df, hum_df,
+                          by = c("plot_number", "date_time",
+                                 "device_number", "mission_start",
+                                 "user_start", "user_end")) %>% 
+      select(plot_number, device_number, date_time,
+             temperature, humidity, everything())
+    
+    return(merged_df)
+    }
+    
+
+  plots <- names(data)
+
+  # Wrangle all iButton data from main dataframe
+  if (all(grepl("plot_", plots))) {
+    
+    # If multiple plots, return list of filtered data by plot
+    result <- purrr::map2(data, plots, ~filter_plot(.x, .y, start_date, end_date))
+    if (bind_rows) {
+      result <- bind_rows(result)
+    }
+    return(result)
+
+    # If a single plot, return filtered data for that plot
+  } else if((length(plots) == 2) && all(data_types %in% names(data))) {
+    return(filter_plot(data)) 
+  } else {
+      stop("Data structure does not match expected plot or plots format")
+  }
+  
+}
+
+```
+
+### Sample usage
+
+```{r example_ibutton_filter_data}
+
+# Example usage of ibutton_filter_data function
+filtered_data <- ibutton_filter_data(all_data,
+                    data_types = c("temperature", "humidity"),
+                    start_date = start_dates, end_date = end_dates,
+                    min_temp = 70, max_temp = 80,
+                    min_humidity = 70, max_humidity = 90,
+                    bind_rows = TRUE)
+
+# Another example; note that not all arguments are required to run the function
+filtered_data <- ibutton_filter_data(three_data)
+
+```
+
+### EXAMPLE: Summarize iButton Data
+
+After using the function `ibutton_filter_data` to clean the data, you can summarize it as needed. For example, you can quickly visualize the humidity data across different plots using a boxplot.
+
+```{r calculate_some_stats}
+
+plot <- ggplot(filtered_data, aes(x = plot_number, y = humidity)) +
+  geom_boxplot() +
+  labs(x = "Plot Number",
+       y = "Relative Humidity (%)") +
+  theme_minimal()
+plot
+```
