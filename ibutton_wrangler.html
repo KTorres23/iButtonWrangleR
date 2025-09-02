@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.21">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Karina Torres">
+<meta name="dcterms.date" content="2025-09-01">
+
+<title>iButtonWrangleR: Cleaning up iButtonLink data</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="ibutton_wrangler_files/libs/clipboard/clipboard.min.js"></script>
+<script src="ibutton_wrangler_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="ibutton_wrangler_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="ibutton_wrangler_files/libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="ibutton_wrangler_files/libs/quarto-html/popper.min.js"></script>
+<script src="ibutton_wrangler_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="ibutton_wrangler_files/libs/quarto-html/anchor.min.js"></script>
+<link href="ibutton_wrangler_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="ibutton_wrangler_files/libs/quarto-html/quarto-syntax-highlighting-ea1d7ac60288e0f1efdbc993fd8432ae.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="ibutton_wrangler_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="ibutton_wrangler_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="ibutton_wrangler_files/libs/bootstrap/bootstrap-9e3ffae467580fdb927a41352e75a2e0.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#how-to-get-started" id="toc-how-to-get-started" class="nav-link active" data-scroll-target="#how-to-get-started">How to get started:</a></li>
+  <li><a href="#environment-set-up" id="toc-environment-set-up" class="nav-link" data-scroll-target="#environment-set-up">Environment Set-up</a></li>
+  <li><a href="#internal-fx-extract-raw-data" id="toc-internal-fx-extract-raw-data" class="nav-link" data-scroll-target="#internal-fx-extract-raw-data">Internal FX: Extract Raw Data</a></li>
+  <li><a href="#read-files" id="toc-read-files" class="nav-link" data-scroll-target="#read-files">Read files</a>
+  <ul class="collapse">
+  <li><a href="#fx-read-batch-of-files" id="toc-fx-read-batch-of-files" class="nav-link" data-scroll-target="#fx-read-batch-of-files">FX: Read Batch of Files</a>
+  <ul class="collapse">
+  <li><a href="#sample-usage" id="toc-sample-usage" class="nav-link" data-scroll-target="#sample-usage">Sample usage</a></li>
+  </ul></li>
+  <li><a href="#fx-read-single-file" id="toc-fx-read-single-file" class="nav-link" data-scroll-target="#fx-read-single-file">FX: Read Single File</a>
+  <ul class="collapse">
+  <li><a href="#sample-usage-1" id="toc-sample-usage-1" class="nav-link" data-scroll-target="#sample-usage-1">Sample usage</a></li>
+  </ul></li>
+  <li><a href="#fx-read-user-datestimes" id="toc-fx-read-user-datestimes" class="nav-link" data-scroll-target="#fx-read-user-datestimes">FX: Read User Dates/Times</a>
+  <ul class="collapse">
+  <li><a href="#sample-usage-2" id="toc-sample-usage-2" class="nav-link" data-scroll-target="#sample-usage-2">Sample usage</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#view-data" id="toc-view-data" class="nav-link" data-scroll-target="#view-data">View data</a>
+  <ul class="collapse">
+  <li><a href="#fx-view-ibutton-metadata" id="toc-fx-view-ibutton-metadata" class="nav-link" data-scroll-target="#fx-view-ibutton-metadata">FX: View iButton Metadata</a>
+  <ul class="collapse">
+  <li><a href="#sample-usage-3" id="toc-sample-usage-3" class="nav-link" data-scroll-target="#sample-usage-3">Sample usage</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#filter-data" id="toc-filter-data" class="nav-link" data-scroll-target="#filter-data">Filter data</a>
+  <ul class="collapse">
+  <li><a href="#fx-filter-ibutton-data" id="toc-fx-filter-ibutton-data" class="nav-link" data-scroll-target="#fx-filter-ibutton-data">FX: Filter iButton Data</a>
+  <ul class="collapse">
+  <li><a href="#sample-usage-4" id="toc-sample-usage-4" class="nav-link" data-scroll-target="#sample-usage-4">Sample usage</a></li>
+  <li><a href="#example-summarize-ibutton-data" id="toc-example-summarize-ibutton-data" class="nav-link" data-scroll-target="#example-summarize-ibutton-data">Example: Summarize iButton Data</a></li>
+  </ul></li>
+  </ul></li>
+  </ul>
+</nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">iButtonWrangleR: Cleaning up iButtonLink data</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Karina Torres </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">September 1, 2025</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>This script contains functions to read, clean, and filter <a href="https://www.ibuttonlink.com/">iButtonLink</a> data collected specifically from D1923 loggers (other models have not been tested on this code). The functions are designed to handle multiple loggers organized in folders by their respective plots. See the <em>sample_data</em> folder for example iButton data files, and the <strong>Sample usage</strong> headers for examples of each function.</p>
+<section id="how-to-get-started" class="level1">
+<h1>How to get started:</h1>
+<ol type="1">
+<li>Open the script <code>ibutton_wrangler.qmd</code> in your preferred IDE (e.g., RStudio, Positron)</li>
+<li>Run all the code blocks associated with the <strong>“FX: ….”</strong> header.</li>
+<li>Run some of the sample code using the provided data to ensure all functions were ran into your environment. Note that some functions rely on others to work (e.g., <code>ibutton_extract_raw</code> is called within other functions and <code>ibutton_filter_data</code> needs the data read in using one of the reading functions).</li>
+<li>Assuming no errors came up, start working with your own data and modify the functions if needed!</li>
+</ol>
+<p>Your iButton data should be stored in folders by their plots. The following convention is used in this script:</p>
+<ul>
+<li>plot_PLOTNUMBER_DEPLOYDATE_PICKUPDATE</li>
+</ul>
+<p>The following is an example of a folder name with the convention described above:</p>
+<ul>
+<li>plot_1a_0630-0702</li>
+</ul>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>This script was designed for humidity and temperature data. If other data types are present, exercise caution in that they are processed correctly by the functions in this script.</p>
+</div>
+</div>
+</section>
+<section id="environment-set-up" class="level1">
+<h1>Environment Set-up</h1>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a><span class="co"># Install necessary packages if not already installed</span></span>
+<span id="cb1-2"><a href="#cb1-2"></a><span class="co">#options(repos = c(CRAN = "https://cran.r-project.org"))</span></span>
+<span id="cb1-3"><a href="#cb1-3"></a><span class="co">#install.packages(c("rmarkdown", "pacman", "tidyverse", "readxl", "here"))</span></span>
+<span id="cb1-4"><a href="#cb1-4"></a></span>
+<span id="cb1-5"><a href="#cb1-5"></a><span class="co"># Load packages</span></span>
+<span id="cb1-6"><a href="#cb1-6"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(tidyverse, readxl, here)</span>
+<span id="cb1-7"><a href="#cb1-7"></a></span>
+<span id="cb1-8"><a href="#cb1-8"></a><span class="co"># Set working directory to project root</span></span>
+<span id="cb1-9"><a href="#cb1-9"></a><span class="fu">setwd</span>(<span class="fu">here</span>())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="internal-fx-extract-raw-data" class="level1">
+<h1>Internal FX: Extract Raw Data</h1>
+<p><strong><em>Internal function for running other functions in this script</em></strong></p>
+<p><strong>Function name:</strong> ibutton_extract_raw</p>
+<p><strong>Function output:</strong> returns a dataframe of the metadata and a list of the raw data</p>
+<p><strong>Function arguments:</strong> <code>filepath</code>, <code>folder_name</code></p>
+<ul>
+<li><code>filepath</code> is the path to an .xlsx iButton logger file</li>
+<li><code>folder_name</code> is an optional argument to specify the folder name (plot name) where the iButton file is located; if NULL, it will not be included in the metadata</li>
+</ul>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a><span class="co"># --- F(x): Wrangle a file of raw iButton data ----</span></span>
+<span id="cb2-2"><a href="#cb2-2"></a>ibutton_extract_raw <span class="ot">&lt;-</span> <span class="cf">function</span>(filepath, <span class="at">folder_name =</span> <span class="cn">NULL</span>) {</span>
+<span id="cb2-3"><a href="#cb2-3"></a>  </span>
+<span id="cb2-4"><a href="#cb2-4"></a>  <span class="co"># Read in everything (no header)</span></span>
+<span id="cb2-5"><a href="#cb2-5"></a>  all_data <span class="ot">&lt;-</span> <span class="fu">suppressMessages</span>(<span class="fu">as.data.frame</span>(<span class="fu">read_excel</span>(filepath, <span class="at">col_names =</span> <span class="cn">FALSE</span>)))</span>
+<span id="cb2-6"><a href="#cb2-6"></a>  </span>
+<span id="cb2-7"><a href="#cb2-7"></a>  <span class="co"># Find the row where main iButton data field names begin</span></span>
+<span id="cb2-8"><a href="#cb2-8"></a>  data_row <span class="ot">&lt;-</span> <span class="fu">which</span>(all_data[[<span class="dv">1</span>]] <span class="sc">==</span> <span class="st">"Date"</span> <span class="sc">&amp;</span> all_data[[<span class="dv">2</span>]] <span class="sc">==</span> <span class="st">"Time"</span> <span class="sc">&amp;</span> all_data[[<span class="dv">3</span>]] <span class="sc">==</span> <span class="st">"Value"</span>)</span>
+<span id="cb2-9"><a href="#cb2-9"></a>  </span>
+<span id="cb2-10"><a href="#cb2-10"></a>  <span class="co"># Throw error if necessary</span></span>
+<span id="cb2-11"><a href="#cb2-11"></a>  <span class="cf">if</span> (<span class="fu">length</span>(data_row) <span class="sc">==</span> <span class="dv">0</span>) <span class="fu">stop</span>(<span class="st">"Data row with headers not found"</span>)</span>
+<span id="cb2-12"><a href="#cb2-12"></a>  </span>
+<span id="cb2-13"><a href="#cb2-13"></a>  <span class="co"># Get metadata for logger, which is everything before the header row (extracted above)</span></span>
+<span id="cb2-14"><a href="#cb2-14"></a>  meta_raw <span class="ot">&lt;-</span> all_data[<span class="dv">1</span><span class="sc">:</span>(data_row <span class="sc">-</span> <span class="dv">1</span>), , drop <span class="ot">=</span> <span class="cn">FALSE</span>]</span>
+<span id="cb2-15"><a href="#cb2-15"></a>  </span>
+<span id="cb2-16"><a href="#cb2-16"></a>  <span class="co"># Remove blank rows</span></span>
+<span id="cb2-17"><a href="#cb2-17"></a>  meta_raw <span class="ot">&lt;-</span> meta_raw[<span class="fu">rowSums</span>(<span class="fu">is.na</span>(meta_raw)) <span class="sc">&lt;</span> <span class="fu">ncol</span>(meta_raw), ]</span>
+<span id="cb2-18"><a href="#cb2-18"></a>  </span>
+<span id="cb2-19"><a href="#cb2-19"></a></span>
+<span id="cb2-20"><a href="#cb2-20"></a>    </span>
+<span id="cb2-21"><a href="#cb2-21"></a>  <span class="co"># Wrangle metadata</span></span>
+<span id="cb2-22"><a href="#cb2-22"></a>  <span class="co"># Some keys in col1, some possible values in col3, col2</span></span>
+<span id="cb2-23"><a href="#cb2-23"></a>  meta <span class="ot">&lt;-</span> meta_raw <span class="sc">%&gt;%</span></span>
+<span id="cb2-24"><a href="#cb2-24"></a>    <span class="fu">select</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb2-25"><a href="#cb2-25"></a>    <span class="fu">setNames</span>(<span class="fu">c</span>(<span class="st">"key"</span>, <span class="st">"blank"</span>, <span class="st">"value"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb2-26"><a href="#cb2-26"></a>    <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(key), key <span class="sc">!=</span> <span class="st">"NA"</span>, <span class="sc">!</span><span class="fu">str_detect</span>(key, <span class="st">"^NA$"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb2-27"><a href="#cb2-27"></a>    <span class="fu">filter</span>(<span class="sc">!</span>(key <span class="sc">==</span> value <span class="sc">&amp;</span> key <span class="sc">!=</span> <span class="st">"NA"</span>))  <span class="co"># Remove empty rows</span></span>
+<span id="cb2-28"><a href="#cb2-28"></a>    </span>
+<span id="cb2-29"><a href="#cb2-29"></a>  <span class="co"># Collapse by: key = key, value = 3rd col if present, else col2</span></span>
+<span id="cb2-30"><a href="#cb2-30"></a>  meta <span class="ot">&lt;-</span> <span class="fu">suppressMessages</span>(</span>
+<span id="cb2-31"><a href="#cb2-31"></a>    meta <span class="sc">%&gt;%</span></span>
+<span id="cb2-32"><a href="#cb2-32"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb2-33"><a href="#cb2-33"></a>      <span class="at">key =</span> <span class="fu">str_remove</span>(key, <span class="st">":$"</span>), <span class="co"># Remove colon at end</span></span>
+<span id="cb2-34"><a href="#cb2-34"></a>      <span class="at">key =</span> <span class="fu">str_replace_all</span>(key, <span class="st">"</span><span class="sc">\\</span><span class="st">s+"</span>, <span class="st">"_"</span>), <span class="co"># Replace spaces with underscores,</span></span>
+<span id="cb2-35"><a href="#cb2-35"></a>      <span class="at">key =</span> <span class="fu">tolower</span>(key), <span class="co"># Convert to lowercase</span></span>
+<span id="cb2-36"><a href="#cb2-36"></a>      <span class="at">key =</span> <span class="fu">str_remove</span>(key, <span class="st">"</span><span class="sc">\\</span><span class="st">?$"</span>), <span class="co"># Remove question mark at end</span></span>
+<span id="cb2-37"><a href="#cb2-37"></a>      <span class="at">val_final =</span> <span class="fu">case_when</span>(<span class="sc">!</span><span class="fu">is.na</span>(value) <span class="sc">&amp;</span> value <span class="sc">!=</span> <span class="st">"NA"</span> <span class="sc">~</span> value,</span>
+<span id="cb2-38"><a href="#cb2-38"></a>                            <span class="sc">!</span><span class="fu">is.na</span>(blank) <span class="sc">&amp;</span> blank <span class="sc">!=</span> <span class="st">"NA"</span> <span class="sc">~</span> blank,</span>
+<span id="cb2-39"><a href="#cb2-39"></a>                            <span class="cn">TRUE</span> <span class="sc">~</span> <span class="cn">NA_character_</span>)</span>
+<span id="cb2-40"><a href="#cb2-40"></a>    ) <span class="sc">%&gt;%</span></span>
+<span id="cb2-41"><a href="#cb2-41"></a>    <span class="fu">select</span>(key, val_final)</span>
+<span id="cb2-42"><a href="#cb2-42"></a>  )</span>
+<span id="cb2-43"><a href="#cb2-43"></a></span>
+<span id="cb2-44"><a href="#cb2-44"></a>  <span class="co"># In case keys are duplicated, only keep first</span></span>
+<span id="cb2-45"><a href="#cb2-45"></a>  meta <span class="ot">&lt;-</span> meta <span class="sc">%&gt;%</span></span>
+<span id="cb2-46"><a href="#cb2-46"></a>    <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">duplicated</span>(key)) <span class="sc">%&gt;%</span></span>
+<span id="cb2-47"><a href="#cb2-47"></a>    tibble<span class="sc">::</span><span class="fu">deframe</span>()</span>
+<span id="cb2-48"><a href="#cb2-48"></a>  </span>
+<span id="cb2-49"><a href="#cb2-49"></a>  <span class="co"># Add folder name to metadata</span></span>
+<span id="cb2-50"><a href="#cb2-50"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(folder_name)) {</span>
+<span id="cb2-51"><a href="#cb2-51"></a>    meta[[<span class="st">"folder_name"</span>]] <span class="ot">&lt;-</span> folder_name</span>
+<span id="cb2-52"><a href="#cb2-52"></a>  }</span>
+<span id="cb2-53"><a href="#cb2-53"></a>  </span>
+<span id="cb2-54"><a href="#cb2-54"></a>  metadata <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(<span class="fu">t</span>(meta), <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb2-55"><a href="#cb2-55"></a>  </span>
+<span id="cb2-56"><a href="#cb2-56"></a></span>
+<span id="cb2-57"><a href="#cb2-57"></a>    </span>
+<span id="cb2-58"><a href="#cb2-58"></a>  <span class="co"># Wrangle main data (collected microclimatic values) </span></span>
+<span id="cb2-59"><a href="#cb2-59"></a>  data_df <span class="ot">&lt;-</span> all_data[(data_row <span class="sc">+</span> <span class="dv">1</span>)<span class="sc">:</span><span class="fu">nrow</span>(all_data), <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>, drop <span class="ot">=</span> <span class="cn">FALSE</span>]</span>
+<span id="cb2-60"><a href="#cb2-60"></a>  <span class="fu">names</span>(data_df) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Date"</span>, <span class="st">"Time"</span>, <span class="st">"Value"</span>)</span>
+<span id="cb2-61"><a href="#cb2-61"></a>  data_df <span class="ot">&lt;-</span> data_df <span class="sc">%&gt;%</span></span>
+<span id="cb2-62"><a href="#cb2-62"></a>    <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(Date), <span class="sc">!</span><span class="fu">is.na</span>(Time), <span class="sc">!</span><span class="fu">is.na</span>(Value)) <span class="sc">%&gt;%</span></span>
+<span id="cb2-63"><a href="#cb2-63"></a>    <span class="fu">mutate</span>(<span class="at">value =</span> <span class="fu">as.numeric</span>(Value),</span>
+<span id="cb2-64"><a href="#cb2-64"></a>           <span class="at">date_time =</span> <span class="fu">paste</span>(Date, Time),</span>
+<span id="cb2-65"><a href="#cb2-65"></a>           <span class="at">date_time =</span> <span class="fu">ymd_hms</span>(date_time, <span class="at">tz =</span> <span class="st">"EST"</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb2-66"><a href="#cb2-66"></a>    <span class="fu">select</span>(date_time, value)</span>
+<span id="cb2-67"><a href="#cb2-67"></a>  </span>
+<span id="cb2-68"><a href="#cb2-68"></a>  <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">metadata =</span> metadata, <span class="at">data =</span> data_df))</span>
+<span id="cb2-69"><a href="#cb2-69"></a>  </span>
+<span id="cb2-70"><a href="#cb2-70"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="read-files" class="level1">
+<h1>Read files</h1>
+<section id="fx-read-batch-of-files" class="level2">
+<h2 class="anchored" data-anchor-id="fx-read-batch-of-files">FX: Read Batch of Files</h2>
+<p><strong>Function name:</strong> ibutton_read_batch</p>
+<p><strong>Function output:</strong> list of each iButton logger/plot and its respective data and metadata</p>
+<p><strong>Function arguments:</strong> <code>paths_or_parent</code>, <code>auto_list_subfolders</code></p>
+<ul>
+<li><p><code>paths_or_parent</code> is either a vector of folder paths or a single parent folder path, where each folder contains iButton logger data files</p></li>
+<li><p>See <strong>Sample Usage</strong> below for more details</p></li>
+<li><p><code>auto_list_subfolders</code> is a logical value to automatically list subfolders within a parent folder (TRUE) or not (FALSE, by default)</p></li>
+</ul>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a><span class="co"># Paths is a vector of folder paths or a single folder path</span></span>
+<span id="cb3-2"><a href="#cb3-2"></a>ibutton_read_batch <span class="ot">&lt;-</span> <span class="cf">function</span>(paths_or_parent, <span class="at">auto_list_subfolders =</span> <span class="cn">FALSE</span>) {</span>
+<span id="cb3-3"><a href="#cb3-3"></a></span>
+<span id="cb3-4"><a href="#cb3-4"></a>  </span>
+<span id="cb3-5"><a href="#cb3-5"></a>    <span class="co"># --- F(x) Extract data type from the iButton metadata of an Excel file ---</span></span>
+<span id="cb3-6"><a href="#cb3-6"></a>    get_datatype_from_meta <span class="ot">&lt;-</span> <span class="cf">function</span>(result_element) {</span>
+<span id="cb3-7"><a href="#cb3-7"></a>      data_unit <span class="ot">&lt;-</span> result_element<span class="sc">$</span>metadata<span class="sc">$</span>data_unit</span>
+<span id="cb3-8"><a href="#cb3-8"></a>      </span>
+<span id="cb3-9"><a href="#cb3-9"></a>      <span class="cf">if</span>(<span class="fu">is.null</span>(data_unit) <span class="sc">||</span> data_unit <span class="sc">==</span> <span class="st">"NA"</span>) {</span>
+<span id="cb3-10"><a href="#cb3-10"></a>        <span class="fu">return</span>(<span class="cn">NULL</span>)</span>
+<span id="cb3-11"><a href="#cb3-11"></a>      } <span class="cf">else</span> <span class="cf">if</span> (data_unit <span class="sc">==</span> <span class="st">"%RH"</span>) {</span>
+<span id="cb3-12"><a href="#cb3-12"></a>        <span class="fu">return</span>(<span class="st">"humidity"</span>)</span>
+<span id="cb3-13"><a href="#cb3-13"></a>      } <span class="cf">else</span> <span class="cf">if</span> (data_unit <span class="sc">==</span> <span class="st">"degrees C"</span>) {</span>
+<span id="cb3-14"><a href="#cb3-14"></a>        <span class="fu">return</span>(<span class="st">"temperature"</span>)</span>
+<span id="cb3-15"><a href="#cb3-15"></a>      } <span class="cf">else</span> {</span>
+<span id="cb3-16"><a href="#cb3-16"></a>        <span class="fu">print</span>(<span class="fu">paste</span>(<span class="st">"Unknown data unit:"</span>, data_unit))</span>
+<span id="cb3-17"><a href="#cb3-17"></a>        <span class="fu">return</span>(data_unit)</span>
+<span id="cb3-18"><a href="#cb3-18"></a>      }</span>
+<span id="cb3-19"><a href="#cb3-19"></a>    }</span>
+<span id="cb3-20"><a href="#cb3-20"></a>     </span>
+<span id="cb3-21"><a href="#cb3-21"></a>  </span>
+<span id="cb3-22"><a href="#cb3-22"></a>  </span>
+<span id="cb3-23"><a href="#cb3-23"></a>  <span class="co"># --- F(x) Read all Excel files within a folder ---</span></span>
+<span id="cb3-24"><a href="#cb3-24"></a>  read_folder <span class="ot">&lt;-</span> <span class="cf">function</span>(folder_path) {</span>
+<span id="cb3-25"><a href="#cb3-25"></a>    </span>
+<span id="cb3-26"><a href="#cb3-26"></a>    folder_name <span class="ot">&lt;-</span> <span class="fu">basename</span>(folder_path)</span>
+<span id="cb3-27"><a href="#cb3-27"></a></span>
+<span id="cb3-28"><a href="#cb3-28"></a>    <span class="co"># List Excel files inside folder</span></span>
+<span id="cb3-29"><a href="#cb3-29"></a>    files <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="at">path =</span> folder_path, <span class="at">pattern =</span> <span class="st">"</span><span class="sc">\\</span><span class="st">.xlsx?$"</span>, <span class="at">full.names =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-30"><a href="#cb3-30"></a>    </span>
+<span id="cb3-31"><a href="#cb3-31"></a>    <span class="co"># Read all files and process</span></span>
+<span id="cb3-32"><a href="#cb3-32"></a>    results <span class="ot">&lt;-</span> purrr<span class="sc">::</span><span class="fu">map</span>(files, <span class="sc">~</span> {</span>
+<span id="cb3-33"><a href="#cb3-33"></a>      <span class="fu">tryCatch</span>(</span>
+<span id="cb3-34"><a href="#cb3-34"></a>        <span class="fu">ibutton_extract_raw</span>(.x, <span class="at">folder_name =</span> folder_name),</span>
+<span id="cb3-35"><a href="#cb3-35"></a>        <span class="at">error =</span> <span class="cf">function</span>(e) {</span>
+<span id="cb3-36"><a href="#cb3-36"></a>          <span class="fu">warning</span>(<span class="fu">paste</span>(<span class="st">"Error reading file:"</span>, .x, <span class="st">":"</span>, e<span class="sc">$</span>message))</span>
+<span id="cb3-37"><a href="#cb3-37"></a>          <span class="cn">NULL</span></span>
+<span id="cb3-38"><a href="#cb3-38"></a>        }</span>
+<span id="cb3-39"><a href="#cb3-39"></a>      )</span>
+<span id="cb3-40"><a href="#cb3-40"></a>    })</span>
+<span id="cb3-41"><a href="#cb3-41"></a>    </span>
+<span id="cb3-42"><a href="#cb3-42"></a>    </span>
+<span id="cb3-43"><a href="#cb3-43"></a>    </span>
+<span id="cb3-44"><a href="#cb3-44"></a>    <span class="co"># Remove NULLs from errors</span></span>
+<span id="cb3-45"><a href="#cb3-45"></a>    results <span class="ot">&lt;-</span> purrr<span class="sc">::</span><span class="fu">compact</span>(results)</span>
+<span id="cb3-46"><a href="#cb3-46"></a>    </span>
+<span id="cb3-47"><a href="#cb3-47"></a>    </span>
+<span id="cb3-48"><a href="#cb3-48"></a>    <span class="co"># Assign names to the list of Excel files based on metadata</span></span>
+<span id="cb3-49"><a href="#cb3-49"></a>    names_vec <span class="ot">&lt;-</span> purrr<span class="sc">::</span><span class="fu">map_chr</span>(results, <span class="sc">~</span> {</span>
+<span id="cb3-50"><a href="#cb3-50"></a>      </span>
+<span id="cb3-51"><a href="#cb3-51"></a>      data_type <span class="ot">&lt;-</span> <span class="fu">get_datatype_from_meta</span>(.x)</span>
+<span id="cb3-52"><a href="#cb3-52"></a>      </span>
+<span id="cb3-53"><a href="#cb3-53"></a>      <span class="cf">if</span> (<span class="fu">is.null</span>(data_type) <span class="sc">||</span> data_type <span class="sc">==</span> <span class="st">""</span>) {</span>
+<span id="cb3-54"><a href="#cb3-54"></a>        <span class="co"># fallback name using basename of file without extension if metadata missing</span></span>
+<span id="cb3-55"><a href="#cb3-55"></a>        file_base <span class="ot">&lt;-</span> tools<span class="sc">::</span><span class="fu">file_path_sans_ext</span>(<span class="fu">basename</span>(.x<span class="sc">$</span>source_file <span class="sc">%||%</span> <span class="cn">NA</span>))</span>
+<span id="cb3-56"><a href="#cb3-56"></a>        </span>
+<span id="cb3-57"><a href="#cb3-57"></a>        <span class="cf">if</span> (<span class="fu">is.na</span>(file_base)) {</span>
+<span id="cb3-58"><a href="#cb3-58"></a>          file_base <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"file_"</span>, <span class="fu">sample</span>(<span class="dv">10000</span><span class="sc">:</span><span class="dv">99999</span>, <span class="dv">1</span>))  <span class="co"># random fallback</span></span>
+<span id="cb3-59"><a href="#cb3-59"></a>        }</span>
+<span id="cb3-60"><a href="#cb3-60"></a>        data_type <span class="ot">&lt;-</span> file_base</span>
+<span id="cb3-61"><a href="#cb3-61"></a>      }</span>
+<span id="cb3-62"><a href="#cb3-62"></a>      data_type</span>
+<span id="cb3-63"><a href="#cb3-63"></a>    })</span>
+<span id="cb3-64"><a href="#cb3-64"></a>    </span>
+<span id="cb3-65"><a href="#cb3-65"></a>    <span class="fu">names</span>(results) <span class="ot">&lt;-</span> names_vec</span>
+<span id="cb3-66"><a href="#cb3-66"></a></span>
+<span id="cb3-67"><a href="#cb3-67"></a>    <span class="fu">return</span>(results)</span>
+<span id="cb3-68"><a href="#cb3-68"></a>  }</span>
+<span id="cb3-69"><a href="#cb3-69"></a></span>
+<span id="cb3-70"><a href="#cb3-70"></a>  </span>
+<span id="cb3-71"><a href="#cb3-71"></a>  <span class="co"># --- F(x) Get list of paths of all subfolders within a parent folder ---</span></span>
+<span id="cb3-72"><a href="#cb3-72"></a>  get_subfolder_paths <span class="ot">&lt;-</span> <span class="cf">function</span>(parent_folder) {</span>
+<span id="cb3-73"><a href="#cb3-73"></a>    <span class="fu">list.dirs</span>(<span class="at">path =</span> parent_folder, <span class="at">recursive =</span> <span class="cn">FALSE</span>, <span class="at">full.names =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-74"><a href="#cb3-74"></a>  }</span>
+<span id="cb3-75"><a href="#cb3-75"></a>  </span>
+<span id="cb3-76"><a href="#cb3-76"></a>  <span class="co"># Determine folders to process</span></span>
+<span id="cb3-77"><a href="#cb3-77"></a>  <span class="cf">if</span> (auto_list_subfolders <span class="sc">&amp;&amp;</span> <span class="fu">length</span>(paths_or_parent) <span class="sc">==</span> <span class="dv">1</span>) {</span>
+<span id="cb3-78"><a href="#cb3-78"></a>    paths <span class="ot">&lt;-</span> <span class="fu">get_subfolder_paths</span>(paths_or_parent) <span class="co"># For folders within folders</span></span>
+<span id="cb3-79"><a href="#cb3-79"></a>  } <span class="cf">else</span> {</span>
+<span id="cb3-80"><a href="#cb3-80"></a>    paths <span class="ot">&lt;-</span> paths_or_parent <span class="co"># For single files or list of folders</span></span>
+<span id="cb3-81"><a href="#cb3-81"></a>  }</span>
+<span id="cb3-82"><a href="#cb3-82"></a>  </span>
+<span id="cb3-83"><a href="#cb3-83"></a>  <span class="co"># Read all iButton data from folders &amp; files</span></span>
+<span id="cb3-84"><a href="#cb3-84"></a>  <span class="cf">if</span>(<span class="fu">length</span>(paths) <span class="sc">==</span> <span class="dv">1</span>) {</span>
+<span id="cb3-85"><a href="#cb3-85"></a>    <span class="co"># If a single folder, return the list of data from that folder</span></span>
+<span id="cb3-86"><a href="#cb3-86"></a>    <span class="fu">read_folder</span>(paths)</span>
+<span id="cb3-87"><a href="#cb3-87"></a>  } <span class="cf">else</span> {</span>
+<span id="cb3-88"><a href="#cb3-88"></a>    <span class="co"># If multiple folders, return named list of results by folder</span></span>
+<span id="cb3-89"><a href="#cb3-89"></a>    purrr<span class="sc">::</span><span class="fu">set_names</span>(paths, <span class="fu">basename</span>(paths)) <span class="sc">%&gt;%</span></span>
+<span id="cb3-90"><a href="#cb3-90"></a>      purrr<span class="sc">::</span><span class="fu">map</span>(read_folder)</span>
+<span id="cb3-91"><a href="#cb3-91"></a>  }</span>
+<span id="cb3-92"><a href="#cb3-92"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<section id="sample-usage" class="level3">
+<h3 class="anchored" data-anchor-id="sample-usage">Sample usage</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a><span class="co"># Example 1: Running a single plot/folder</span></span>
+<span id="cb4-2"><a href="#cb4-2"></a><span class="co"># - A string of the path to the single plot/logger</span></span>
+<span id="cb4-3"><a href="#cb4-3"></a><span class="co"># - auto_list_subfolders = FALSE (by default)</span></span>
+<span id="cb4-4"><a href="#cb4-4"></a>ibutton_folder <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">"sample_data"</span>, <span class="st">"plot_1a_0630-0702"</span>)</span>
+<span id="cb4-5"><a href="#cb4-5"></a>one_data <span class="ot">&lt;-</span> <span class="fu">ibutton_read_batch</span>(ibutton_folder)</span>
+<span id="cb4-6"><a href="#cb4-6"></a></span>
+<span id="cb4-7"><a href="#cb4-7"></a></span>
+<span id="cb4-8"><a href="#cb4-8"></a><span class="co"># Example 2: Running multiple single plots/folders</span></span>
+<span id="cb4-9"><a href="#cb4-9"></a><span class="co"># - A vector or list of folder paths of strings where the folders are individual plots/loggers </span></span>
+<span id="cb4-10"><a href="#cb4-10"></a><span class="co"># - auto_list_subfolders = FALSE (by default)</span></span>
+<span id="cb4-11"><a href="#cb4-11"></a>list_folders <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb4-12"><a href="#cb4-12"></a>  <span class="fu">here</span>(<span class="st">"sample_data"</span>, <span class="st">"plot_1a_0630-0702"</span>),</span>
+<span id="cb4-13"><a href="#cb4-13"></a>  <span class="fu">here</span>(<span class="st">"sample_data"</span>, <span class="st">"plot_1b_0704-0707"</span>),</span>
+<span id="cb4-14"><a href="#cb4-14"></a>  <span class="fu">here</span>(<span class="st">"sample_data"</span>, <span class="st">"plot_1c_0714-0716"</span>)</span>
+<span id="cb4-15"><a href="#cb4-15"></a>)</span>
+<span id="cb4-16"><a href="#cb4-16"></a>three_data <span class="ot">&lt;-</span> <span class="fu">ibutton_read_batch</span>(list_folders)</span>
+<span id="cb4-17"><a href="#cb4-17"></a></span>
+<span id="cb4-18"><a href="#cb4-18"></a></span>
+<span id="cb4-19"><a href="#cb4-19"></a><span class="co"># Example 3: Running multiple plots/folders within a parent folder</span></span>
+<span id="cb4-20"><a href="#cb4-20"></a><span class="co"># - A string of the parent folder path, where the subfolders will be automatically iterated and listed in the function (must set auto_list_subfolders = TRUE)</span></span>
+<span id="cb4-21"><a href="#cb4-21"></a><span class="co"># - if TRUE is not specified, function does NOT work</span></span>
+<span id="cb4-22"><a href="#cb4-22"></a>ibutton_folders <span class="ot">&lt;-</span> <span class="fu">here</span>(<span class="st">"sample_data"</span>)</span>
+<span id="cb4-23"><a href="#cb4-23"></a>all_data <span class="ot">&lt;-</span> <span class="fu">ibutton_read_batch</span>(ibutton_folders, <span class="cn">TRUE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+</section>
+<section id="fx-read-single-file" class="level2">
+<h2 class="anchored" data-anchor-id="fx-read-single-file">FX: Read Single File</h2>
+<p><strong>Function name:</strong> ibutton_read_file</p>
+<p><strong>Function output:</strong> list of the data and dataframe of the metadata associated with a single iButton logger file</p>
+<p><strong>Function arguments:</strong> <code>file_path</code></p>
+<ul>
+<li><code>file_path</code> requires path to an .xlsx iButton logger file</li>
+</ul>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a><span class="co"># --- Function: Read a single iButton file </span></span>
+<span id="cb5-2"><a href="#cb5-2"></a>ibutton_read_file <span class="ot">&lt;-</span> <span class="cf">function</span>(file_path) {</span>
+<span id="cb5-3"><a href="#cb5-3"></a>  folder_name <span class="ot">&lt;-</span> <span class="fu">basename</span>(<span class="fu">dirname</span>(file_path))  <span class="co"># Get folder name from file path</span></span>
+<span id="cb5-4"><a href="#cb5-4"></a>  <span class="fu">ibutton_extract_raw</span>(file_path, <span class="at">folder_name =</span> folder_name)</span>
+<span id="cb5-5"><a href="#cb5-5"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<section id="sample-usage-1" class="level3">
+<h3 class="anchored" data-anchor-id="sample-usage-1">Sample usage</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a><span class="co"># Example usage of read_single_ibutton_file function</span></span>
+<span id="cb6-2"><a href="#cb6-2"></a><span class="fu">with</span>(<span class="fu">ibutton_read_file</span>(<span class="fu">here</span>(<span class="st">"sample_data"</span>, <span class="st">"plot_1a_0630-0702/40000000823D6A41_063025175201_1.xlsx"</span>)), {</span>
+<span id="cb6-3"><a href="#cb6-3"></a>  single_data <span class="ot">&lt;&lt;-</span> data</span>
+<span id="cb6-4"><a href="#cb6-4"></a>  single_metadata <span class="ot">&lt;&lt;-</span> metadata</span>
+<span id="cb6-5"><a href="#cb6-5"></a>})</span>
+<span id="cb6-6"><a href="#cb6-6"></a></span>
+<span id="cb6-7"><a href="#cb6-7"></a><span class="co"># Or simply:</span></span>
+<span id="cb6-8"><a href="#cb6-8"></a>my_data <span class="ot">&lt;-</span> <span class="fu">ibutton_read_file</span>(<span class="fu">here</span>(<span class="st">"sample_data"</span>, <span class="st">"plot_1a_0630-0702/40000000823D6A41_063025175201_1.xlsx"</span>))</span>
+<span id="cb6-9"><a href="#cb6-9"></a>single_data <span class="ot">&lt;-</span> my_data<span class="sc">$</span>data</span>
+<span id="cb6-10"><a href="#cb6-10"></a>single_metadata <span class="ot">&lt;-</span> my_data<span class="sc">$</span>metadata</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+</section>
+<section id="fx-read-user-datestimes" class="level2">
+<h2 class="anchored" data-anchor-id="fx-read-user-datestimes">FX: Read User Dates/Times</h2>
+<p><strong>Function name:</strong> ibutton_read_datetimes</p>
+<p><strong>Function output:</strong> named list with plots and respective desired start/end dates and times</p>
+<p><strong>Function arguments:</strong> <code>file_path</code></p>
+<ul>
+<li><code>file_path</code> is the path to a CSV file with columns: plot_number, start_date, end_date</li>
+</ul>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1"></a><span class="co"># --- F(x): Read start and end dates for filtering iButton data ---</span></span>
+<span id="cb7-2"><a href="#cb7-2"></a>ibutton_read_datetimes <span class="ot">&lt;-</span> <span class="cf">function</span>(file_path) {</span>
+<span id="cb7-3"><a href="#cb7-3"></a>  </span>
+<span id="cb7-4"><a href="#cb7-4"></a>  <span class="co"># Read CSV</span></span>
+<span id="cb7-5"><a href="#cb7-5"></a>  date_ranges_df <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(file_path, <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb7-6"><a href="#cb7-6"></a>  </span>
+<span id="cb7-7"><a href="#cb7-7"></a>  <span class="co"># Convert start_date and end_date to POSIXct</span></span>
+<span id="cb7-8"><a href="#cb7-8"></a>  date_ranges_df<span class="sc">$</span>start_date <span class="ot">&lt;-</span> <span class="fu">as.POSIXct</span>(date_ranges_df<span class="sc">$</span>start_date, <span class="at">tz =</span> <span class="st">"EST"</span>)</span>
+<span id="cb7-9"><a href="#cb7-9"></a>  date_ranges_df<span class="sc">$</span>end_date <span class="ot">&lt;-</span> <span class="fu">as.POSIXct</span>(date_ranges_df<span class="sc">$</span>end_date, <span class="at">tz =</span> <span class="st">"EST"</span>)</span>
+<span id="cb7-10"><a href="#cb7-10"></a></span>
+<span id="cb7-11"><a href="#cb7-11"></a>  <span class="co"># Convert to named lists</span></span>
+<span id="cb7-12"><a href="#cb7-12"></a>  start_dates <span class="ot">&lt;-</span> <span class="fu">setNames</span>(date_ranges_df<span class="sc">$</span>start_date, date_ranges_df<span class="sc">$</span>plot_number)</span>
+<span id="cb7-13"><a href="#cb7-13"></a>  end_dates <span class="ot">&lt;-</span> <span class="fu">setNames</span>(date_ranges_df<span class="sc">$</span>end_date, date_ranges_df<span class="sc">$</span>plot_number)</span>
+<span id="cb7-14"><a href="#cb7-14"></a>  </span>
+<span id="cb7-15"><a href="#cb7-15"></a>  <span class="co"># Return a list of start and end dates</span></span>
+<span id="cb7-16"><a href="#cb7-16"></a>  <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">start_dates =</span> start_dates, <span class="at">end_dates =</span> end_dates))</span>
+<span id="cb7-17"><a href="#cb7-17"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<section id="sample-usage-2" class="level3">
+<h3 class="anchored" data-anchor-id="sample-usage-2">Sample usage</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a><span class="co"># Example usage of ibutton_read_datetimes function</span></span>
+<span id="cb8-2"><a href="#cb8-2"></a>user_dates <span class="ot">&lt;-</span> <span class="fu">ibutton_read_datetimes</span>(<span class="st">"date_ranges.csv"</span>)</span>
+<span id="cb8-3"><a href="#cb8-3"></a>start_dates <span class="ot">&lt;-</span> <span class="fu">as.list</span>(user_dates<span class="sc">$</span>start_dates)</span>
+<span id="cb8-4"><a href="#cb8-4"></a>end_dates <span class="ot">&lt;-</span> <span class="fu">as.list</span>(user_dates<span class="sc">$</span>end_dates)</span>
+<span id="cb8-5"><a href="#cb8-5"></a></span>
+<span id="cb8-6"><a href="#cb8-6"></a><span class="co"># Another way to specify start and end dates is</span></span>
+<span id="cb8-7"><a href="#cb8-7"></a><span class="co"># to manually specify them as named lists:</span></span>
+<span id="cb8-8"><a href="#cb8-8"></a>start_dates <span class="ot">=</span> <span class="fu">list</span>(</span>
+<span id="cb8-9"><a href="#cb8-9"></a>  <span class="st">"plot_1a_0630-0702"</span> <span class="ot">=</span> <span class="fu">as.POSIXct</span>(<span class="st">"2025-06-30 17:12:01 EST"</span>),</span>
+<span id="cb8-10"><a href="#cb8-10"></a>  <span class="st">"plot_1b_0704-0707"</span> <span class="ot">=</span> <span class="fu">as.POSIXct</span>(<span class="st">"2025-07-04 20:46:01 EST"</span>)</span>
+<span id="cb8-11"><a href="#cb8-11"></a>)</span>
+<span id="cb8-12"><a href="#cb8-12"></a>end_dates <span class="ot">=</span> <span class="fu">list</span>(</span>
+<span id="cb8-13"><a href="#cb8-13"></a>  <span class="st">"plot_1a_0630-0702"</span> <span class="ot">=</span> <span class="fu">as.POSIXct</span>(<span class="st">"2025-07-02 06:12:01 EST"</span>),</span>
+<span id="cb8-14"><a href="#cb8-14"></a>  <span class="st">"plot_1b_0704-0707"</span> <span class="ot">=</span> <span class="fu">as.POSIXct</span>(<span class="st">"2025-07-07 02:46:01 EST"</span>)</span>
+<span id="cb8-15"><a href="#cb8-15"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+</section>
+</section>
+<section id="view-data" class="level1">
+<h1>View data</h1>
+<section id="fx-view-ibutton-metadata" class="level2">
+<h2 class="anchored" data-anchor-id="fx-view-ibutton-metadata">FX: View iButton Metadata</h2>
+<p><strong>Function name:</strong> ibutton_view_metadata</p>
+<p><strong>Function output:</strong> text output of the metadata contained within an iButton logger file</p>
+<p><strong>Function arguments:</strong> <code>data</code>, <code>data_type</code>, <code>name</code>, <code>multiple</code></p>
+<ul>
+<li><code>data</code> can be a nested list of loggers/plots or a single logger/plot</li>
+<li><code>data_type</code> is either “temperature” or “humidity”</li>
+<li>If the data is a list of multiple loggers/plots:
+<ul>
+<li><code>name</code> is the name of the folder/plot/logger that needs to be viewed</li>
+<li><code>multiple</code> should be set to TRUE</li>
+</ul></li>
+</ul>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1"></a><span class="co"># --- F(x): View iButton metadata ---</span></span>
+<span id="cb9-2"><a href="#cb9-2"></a>ibutton_view_metadata <span class="ot">&lt;-</span> <span class="cf">function</span>(data, <span class="at">data_type =</span> <span class="cn">NULL</span>,</span>
+<span id="cb9-3"><a href="#cb9-3"></a>                                  <span class="at">name =</span> <span class="cn">NULL</span>, <span class="at">multiple =</span> <span class="cn">FALSE</span>) {</span>
+<span id="cb9-4"><a href="#cb9-4"></a>  data_type <span class="ot">&lt;-</span> <span class="fu">tolower</span>(data_type)</span>
+<span id="cb9-5"><a href="#cb9-5"></a>  name <span class="ot">&lt;-</span> <span class="fu">tolower</span>(name)</span>
+<span id="cb9-6"><a href="#cb9-6"></a>  </span>
+<span id="cb9-7"><a href="#cb9-7"></a>  data_types <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"temp"</span>, <span class="st">"temperature"</span>, <span class="st">"humd"</span>, <span class="st">"humidity"</span>)</span>
+<span id="cb9-8"><a href="#cb9-8"></a>  </span>
+<span id="cb9-9"><a href="#cb9-9"></a>  <span class="cf">if</span> (<span class="fu">is.null</span>(data_type) <span class="sc">||</span> <span class="sc">!</span>(data_type <span class="sc">%in%</span> data_types)) {</span>
+<span id="cb9-10"><a href="#cb9-10"></a>    <span class="fu">stop</span>(<span class="st">"Data type must be specified"</span>)</span>
+<span id="cb9-11"><a href="#cb9-11"></a>  }</span>
+<span id="cb9-12"><a href="#cb9-12"></a></span>
+<span id="cb9-13"><a href="#cb9-13"></a>  <span class="do">## Check if data is a nested list that would contain metadata</span></span>
+<span id="cb9-14"><a href="#cb9-14"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.list</span>(data)) {</span>
+<span id="cb9-15"><a href="#cb9-15"></a>    <span class="fu">stop</span>(<span class="st">"Data must be a list."</span>)</span>
+<span id="cb9-16"><a href="#cb9-16"></a>  } <span class="cf">else</span> <span class="cf">if</span> (multiple <span class="sc">&amp;&amp;</span> <span class="sc">!</span><span class="fu">is.null</span>(name) <span class="sc">&amp;&amp;</span> (name <span class="sc">%in%</span> <span class="fu">names</span>(data))) { <span class="co"># Check if multiple loggers</span></span>
+<span id="cb9-17"><a href="#cb9-17"></a>    metadata <span class="ot">&lt;-</span> data[[name]][[data_type]]<span class="sc">$</span>metadata</span>
+<span id="cb9-18"><a href="#cb9-18"></a>  } <span class="cf">else</span> { <span class="co"># Use for single logger</span></span>
+<span id="cb9-19"><a href="#cb9-19"></a>    metadata <span class="ot">&lt;-</span> data[[data_type]]<span class="sc">$</span>metadata</span>
+<span id="cb9-20"><a href="#cb9-20"></a>  }</span>
+<span id="cb9-21"><a href="#cb9-21"></a>  </span>
+<span id="cb9-22"><a href="#cb9-22"></a>  </span>
+<span id="cb9-23"><a href="#cb9-23"></a>  <span class="co"># Convert metadata to a data frame for better viewing</span></span>
+<span id="cb9-24"><a href="#cb9-24"></a>  metadata_df <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(metadata, <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb9-25"><a href="#cb9-25"></a>  </span>
+<span id="cb9-26"><a href="#cb9-26"></a>  <span class="co"># Print the metadata</span></span>
+<span id="cb9-27"><a href="#cb9-27"></a>  <span class="fu">print</span>(metadata_df)</span>
+<span id="cb9-28"><a href="#cb9-28"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<section id="sample-usage-3" class="level3">
+<h3 class="anchored" data-anchor-id="sample-usage-3">Sample usage</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1"></a><span class="co"># Example usage of ibutton_view_metadata function</span></span>
+<span id="cb10-2"><a href="#cb10-2"></a></span>
+<span id="cb10-3"><a href="#cb10-3"></a><span class="co"># If a dataframe contains multiple loggers and folders,</span></span>
+<span id="cb10-4"><a href="#cb10-4"></a><span class="co"># the "name" and "multiple" args MUST be specified</span></span>
+<span id="cb10-5"><a href="#cb10-5"></a><span class="fu">ibutton_view_metadata</span>(<span class="at">data =</span> all_data, <span class="at">data_type =</span> <span class="st">"temperature"</span>,</span>
+<span id="cb10-6"><a href="#cb10-6"></a>                      <span class="at">name =</span> <span class="st">"plot_1a_0630-0702"</span>, <span class="at">multiple =</span> <span class="cn">TRUE</span>) </span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                        datalogid custom_datalogid device_part_number
+1 40000000823D6A41_063025175201_1              N/A             DS1923
+  device_serial_number mission_in_progress suta_mission
+1    *40000000823D6A41               FALSE          N/A
+  waiting_for_temperature_alarm  sample_rate            mission_start_time
+1                         FALSE 20 Minute(s) 2025-06-30 12:52:01 UTC-05:00
+  roll_over_enabled mission_sample_count device_sample_count data_unit
+1             FALSE                  137               12717 degrees C
+  data_logging data_alarm_high_threshold data_alarm_low_threshold user
+1       0.0625                  Disabled                 Disabled  N/A
+  time_stamp reason_for_signing 21_cfr_part_11_summary       folder_name
+1        N/A                N/A                    N/A plot_1a_0630-0702</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1"></a><span class="co"># If a dataframe contains a single logger/plot,</span></span>
+<span id="cb12-2"><a href="#cb12-2"></a><span class="co"># the "name" and "multiple" args are NOT required</span></span>
+<span id="cb12-3"><a href="#cb12-3"></a><span class="fu">ibutton_view_metadata</span>(<span class="at">data =</span> one_data, <span class="at">data_type =</span> <span class="st">"humidity"</span>,</span>
+<span id="cb12-4"><a href="#cb12-4"></a>                      <span class="at">name =</span> <span class="cn">NULL</span>, <span class="at">multiple =</span> <span class="cn">FALSE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                        datalogid custom_datalogid device_part_number
+1 40000000823D6A41_063025175201_2              N/A             DS1923
+  device_serial_number mission_in_progress suta_mission
+1    *40000000823D6A41               FALSE          N/A
+  waiting_for_temperature_alarm  sample_rate            mission_start_time
+1                         FALSE 20 Minute(s) 2025-06-30 12:52:01 UTC-05:00
+  roll_over_enabled mission_sample_count device_sample_count data_unit
+1             FALSE                  137               12717       %RH
+  data_logging data_alarm_high_threshold data_alarm_low_threshold user
+1      0.04%RH                  Disabled                 Disabled  N/A
+  time_stamp reason_for_signing 21_cfr_part_11_summary       folder_name
+1        N/A                N/A                    N/A plot_1a_0630-0702</code></pre>
+</div>
+</div>
+</section>
+</section>
+</section>
+<section id="filter-data" class="level1">
+<h1>Filter data</h1>
+<section id="fx-filter-ibutton-data" class="level2">
+<h2 class="anchored" data-anchor-id="fx-filter-ibutton-data">FX: Filter iButton Data</h2>
+<p><strong>Function name:</strong> ibutton_filter_data</p>
+<p><strong>Function output:</strong> Dataframe with cleaned iButton data (can be combined into a single dataframe or a list of dataframes by plot)</p>
+<p><strong>Function arguments:</strong> <code>data</code>, <code>data_types</code>, <code>start_date</code>, <code>end_date</code>, <code>min_temp</code>, <code>max_temp</code>, <code>min_humidity</code>, <code>max_humidity</code>, <code>bind_rows</code></p>
+<ul>
+<li><code>data</code> can be a nested list of loggers/plots or a single logger/plot</li>
+<li><code>data_types</code> is a character vector for specifying data types collected by the logger, where “temperature” and “humidity” are included by default</li>
+<li><code>start_date</code> &amp; <code>end_date</code> is a named list of POSIXct data types</li>
+<li><code>min_temp</code> &amp; <code>max_temp</code> are numeric values for filtering temperature</li>
+<li><code>min_humidity</code> &amp; <code>max_humidity</code> are numeric values for filtering humidity (0-100 by default)</li>
+<li><code>bind_rows</code> is a logical value to combine all data into a single data frame (TRUE by default) or return a list of data frames by plot (FALSE)</li>
+</ul>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a><span class="co"># --- F(x): Filter iButton data ---</span></span>
+<span id="cb14-2"><a href="#cb14-2"></a>ibutton_filter_data <span class="ot">&lt;-</span> <span class="cf">function</span>(data, <span class="at">data_types =</span> <span class="fu">c</span>(<span class="st">"temperature"</span>, <span class="st">"humidity"</span>),</span>
+<span id="cb14-3"><a href="#cb14-3"></a>                                <span class="at">start_date =</span> <span class="cn">NULL</span>, <span class="at">end_date =</span> <span class="cn">NULL</span>,</span>
+<span id="cb14-4"><a href="#cb14-4"></a>                                <span class="at">min_temp =</span> <span class="cn">NULL</span>, <span class="at">max_temp =</span> <span class="cn">NULL</span>,</span>
+<span id="cb14-5"><a href="#cb14-5"></a>                                <span class="at">min_humidity =</span> <span class="dv">0</span>, <span class="at">max_humidity =</span> <span class="dv">100</span>,</span>
+<span id="cb14-6"><a href="#cb14-6"></a>                                <span class="at">bind_rows =</span> <span class="cn">TRUE</span>) {</span>
+<span id="cb14-7"><a href="#cb14-7"></a></span>
+<span id="cb14-8"><a href="#cb14-8"></a>  <span class="co"># --- F(x) Extract and filter one data type ("temperature" or "humidity")</span></span>
+<span id="cb14-9"><a href="#cb14-9"></a>  extract_and_filter <span class="ot">&lt;-</span> <span class="cf">function</span>(data_type_list, data_type_name, sd, ed) {</span>
+<span id="cb14-10"><a href="#cb14-10"></a>    metadata <span class="ot">&lt;-</span> data_type_list<span class="sc">$</span>metadata</span>
+<span id="cb14-11"><a href="#cb14-11"></a>    data <span class="ot">&lt;-</span> data_type_list<span class="sc">$</span>data</span>
+<span id="cb14-12"><a href="#cb14-12"></a>    </span>
+<span id="cb14-13"><a href="#cb14-13"></a>    <span class="co"># Initialize filtered data to full dataset</span></span>
+<span id="cb14-14"><a href="#cb14-14"></a>    filtered_data <span class="ot">&lt;-</span> data</span>
+<span id="cb14-15"><a href="#cb14-15"></a></span>
+<span id="cb14-16"><a href="#cb14-16"></a>    </span>
+<span id="cb14-17"><a href="#cb14-17"></a>    <span class="co"># Filter by user-supplied date ed, if given</span></span>
+<span id="cb14-18"><a href="#cb14-18"></a>    <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(sd) <span class="sc">&amp;&amp;</span> <span class="sc">!</span><span class="fu">is.null</span>(ed)) {</span>
+<span id="cb14-19"><a href="#cb14-19"></a>      filtered_data <span class="ot">&lt;-</span> filtered_data <span class="sc">%&gt;%</span></span>
+<span id="cb14-20"><a href="#cb14-20"></a>        <span class="fu">filter</span>(date_time <span class="sc">&gt;=</span> <span class="fu">as.POSIXct</span>(sd) <span class="sc">&amp;</span> date_time <span class="sc">&lt;=</span> <span class="fu">as.POSIXct</span>(ed))</span>
+<span id="cb14-21"><a href="#cb14-21"></a>    } <span class="cf">else</span> {</span>
+<span id="cb14-22"><a href="#cb14-22"></a>      <span class="co"># Use full range in data if no date range specified</span></span>
+<span id="cb14-23"><a href="#cb14-23"></a>      sd <span class="ot">&lt;-</span> <span class="fu">min</span>(filtered_data<span class="sc">$</span>date_time, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb14-24"><a href="#cb14-24"></a>      ed <span class="ot">&lt;-</span> <span class="fu">max</span>(filtered_data<span class="sc">$</span>date_time, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb14-25"><a href="#cb14-25"></a>    }</span>
+<span id="cb14-26"><a href="#cb14-26"></a>    </span>
+<span id="cb14-27"><a href="#cb14-27"></a>    </span>
+<span id="cb14-28"><a href="#cb14-28"></a>    <span class="co"># Filter by temperature or humidity depending on data_type_name</span></span>
+<span id="cb14-29"><a href="#cb14-29"></a>    <span class="cf">if</span> (data_type_name <span class="sc">==</span> <span class="st">"temperature"</span>) {</span>
+<span id="cb14-30"><a href="#cb14-30"></a>      <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(min_temp)) {</span>
+<span id="cb14-31"><a href="#cb14-31"></a>        filtered_data <span class="ot">&lt;-</span> filtered_data <span class="sc">%&gt;%</span> <span class="fu">filter</span>(value <span class="sc">&gt;=</span> min_temp)</span>
+<span id="cb14-32"><a href="#cb14-32"></a>      }</span>
+<span id="cb14-33"><a href="#cb14-33"></a>      <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(max_temp)) {</span>
+<span id="cb14-34"><a href="#cb14-34"></a>        filtered_data <span class="ot">&lt;-</span> filtered_data <span class="sc">%&gt;%</span> <span class="fu">filter</span>(value <span class="sc">&lt;=</span> max_temp)</span>
+<span id="cb14-35"><a href="#cb14-35"></a>      }</span>
+<span id="cb14-36"><a href="#cb14-36"></a>      <span class="co"># Remove any negative values for temperature just in case</span></span>
+<span id="cb14-37"><a href="#cb14-37"></a>      filtered_data <span class="ot">&lt;-</span> filtered_data <span class="sc">%&gt;%</span> <span class="fu">filter</span>(value <span class="sc">&gt;=</span> <span class="dv">0</span>)</span>
+<span id="cb14-38"><a href="#cb14-38"></a>      </span>
+<span id="cb14-39"><a href="#cb14-39"></a>    } <span class="cf">else</span> <span class="cf">if</span> (data_type_name <span class="sc">==</span> <span class="st">"humidity"</span>) {</span>
+<span id="cb14-40"><a href="#cb14-40"></a>      <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(min_humidity)) {</span>
+<span id="cb14-41"><a href="#cb14-41"></a>        filtered_data <span class="ot">&lt;-</span> filtered_data <span class="sc">%&gt;%</span> <span class="fu">filter</span>(value <span class="sc">&gt;=</span> min_humidity)</span>
+<span id="cb14-42"><a href="#cb14-42"></a>      }</span>
+<span id="cb14-43"><a href="#cb14-43"></a>      <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(max_humidity)) {</span>
+<span id="cb14-44"><a href="#cb14-44"></a>        <span class="cf">if</span> (max_humidity <span class="sc">&lt;</span> <span class="dv">100</span>) {</span>
+<span id="cb14-45"><a href="#cb14-45"></a>          <span class="co"># Filter out values greater than max_humidity</span></span>
+<span id="cb14-46"><a href="#cb14-46"></a>          filtered_data <span class="ot">&lt;-</span> filtered_data <span class="sc">%&gt;%</span> <span class="fu">filter</span>(value <span class="sc">&lt;=</span> max_humidity)</span>
+<span id="cb14-47"><a href="#cb14-47"></a>        } <span class="cf">else</span> <span class="cf">if</span> (max_humidity <span class="sc">==</span> <span class="dv">100</span>) {</span>
+<span id="cb14-48"><a href="#cb14-48"></a>          <span class="co"># Cap value at 100</span></span>
+<span id="cb14-49"><a href="#cb14-49"></a>          filtered_data <span class="ot">&lt;-</span> filtered_data <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="at">value =</span> <span class="fu">pmin</span>(value, <span class="dv">100</span>))</span>
+<span id="cb14-50"><a href="#cb14-50"></a>        }</span>
+<span id="cb14-51"><a href="#cb14-51"></a>      }</span>
+<span id="cb14-52"><a href="#cb14-52"></a>      <span class="co"># Remove negative humidity values</span></span>
+<span id="cb14-53"><a href="#cb14-53"></a>      filtered_data <span class="ot">&lt;-</span> filtered_data <span class="sc">%&gt;%</span> <span class="fu">filter</span>(value <span class="sc">&gt;=</span> <span class="dv">0</span>)</span>
+<span id="cb14-54"><a href="#cb14-54"></a>    }</span>
+<span id="cb14-55"><a href="#cb14-55"></a>    </span>
+<span id="cb14-56"><a href="#cb14-56"></a>    </span>
+<span id="cb14-57"><a href="#cb14-57"></a>    <span class="co"># Add metadata columns</span></span>
+<span id="cb14-58"><a href="#cb14-58"></a>    filtered_data <span class="ot">&lt;-</span> filtered_data <span class="sc">%&gt;%</span></span>
+<span id="cb14-59"><a href="#cb14-59"></a>      <span class="fu">mutate</span>(</span>
+<span id="cb14-60"><a href="#cb14-60"></a>        <span class="at">plot_number =</span> metadata<span class="sc">$</span>folder_name,</span>
+<span id="cb14-61"><a href="#cb14-61"></a>        <span class="at">device_number =</span> metadata<span class="sc">$</span>device_serial_number,</span>
+<span id="cb14-62"><a href="#cb14-62"></a>        <span class="at">mission_start =</span> <span class="fu">as.POSIXct</span>(metadata<span class="sc">$</span>mission_start_time, <span class="at">tz =</span> <span class="st">"EST"</span>),</span>
+<span id="cb14-63"><a href="#cb14-63"></a>        <span class="co">#mission_start = as.POSIXct(metadata$mission_start_time,</span></span>
+<span id="cb14-64"><a href="#cb14-64"></a>        <span class="co">#                           format = "%Y-%m-%d %H:%M:%S UTC%z",</span></span>
+<span id="cb14-65"><a href="#cb14-65"></a>        <span class="co">#                           tz = "EST"),</span></span>
+<span id="cb14-66"><a href="#cb14-66"></a>        <span class="at">user_start =</span> <span class="fu">as.POSIXct</span>(sd, <span class="at">tz =</span> <span class="st">"EST"</span>),</span>
+<span id="cb14-67"><a href="#cb14-67"></a>        <span class="at">user_end =</span> <span class="fu">as.POSIXct</span>(ed, <span class="at">tz =</span> <span class="st">"EST"</span>)</span>
+<span id="cb14-68"><a href="#cb14-68"></a>      ) <span class="sc">%&gt;%</span></span>
+<span id="cb14-69"><a href="#cb14-69"></a>      <span class="fu">rename</span>(<span class="sc">!!</span><span class="at">data_type_name :=</span> value)  <span class="co"># Rename value column to data_type</span></span>
+<span id="cb14-70"><a href="#cb14-70"></a>    </span>
+<span id="cb14-71"><a href="#cb14-71"></a></span>
+<span id="cb14-72"><a href="#cb14-72"></a>    <span class="fu">return</span>(filtered_data)</span>
+<span id="cb14-73"><a href="#cb14-73"></a>  }</span>
+<span id="cb14-74"><a href="#cb14-74"></a>  </span>
+<span id="cb14-75"><a href="#cb14-75"></a>  </span>
+<span id="cb14-76"><a href="#cb14-76"></a>  <span class="co"># --- F(x) Wrangle all data within a folder ---</span></span>
+<span id="cb14-77"><a href="#cb14-77"></a>  filter_plot <span class="ot">&lt;-</span> <span class="cf">function</span>(plot_data, plot_name, start_date, end_date) {</span>
+<span id="cb14-78"><a href="#cb14-78"></a></span>
+<span id="cb14-79"><a href="#cb14-79"></a>    <span class="co"># Assign user-specified start/end date/time, if specified</span></span>
+<span id="cb14-80"><a href="#cb14-80"></a>    sd <span class="ot">&lt;-</span> <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(start_date) <span class="sc">&amp;&amp;</span> <span class="sc">!</span><span class="fu">is.null</span>(start_date[[plot_name]])) {</span>
+<span id="cb14-81"><a href="#cb14-81"></a>      start_date[[plot_name]]</span>
+<span id="cb14-82"><a href="#cb14-82"></a>    } <span class="cf">else</span> { <span class="co"># fallback to earliest date in all data</span></span>
+<span id="cb14-83"><a href="#cb14-83"></a>      <span class="fu">min</span>(plot_data<span class="sc">$</span>temperature<span class="sc">$</span>data<span class="sc">$</span>date_time, <span class="at">na.rm=</span><span class="cn">TRUE</span>)</span>
+<span id="cb14-84"><a href="#cb14-84"></a>    }</span>
+<span id="cb14-85"><a href="#cb14-85"></a></span>
+<span id="cb14-86"><a href="#cb14-86"></a>    ed <span class="ot">&lt;-</span> <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(end_date) <span class="sc">&amp;&amp;</span> <span class="sc">!</span><span class="fu">is.null</span>(end_date[[plot_name]])) {</span>
+<span id="cb14-87"><a href="#cb14-87"></a>      end_date[[plot_name]]</span>
+<span id="cb14-88"><a href="#cb14-88"></a>    } <span class="cf">else</span> { <span class="co"># fallback to latest date in all data</span></span>
+<span id="cb14-89"><a href="#cb14-89"></a>      <span class="fu">max</span>(plot_data<span class="sc">$</span>temperature<span class="sc">$</span>data<span class="sc">$</span>date_time, <span class="at">na.rm=</span><span class="cn">TRUE</span>)</span>
+<span id="cb14-90"><a href="#cb14-90"></a>    }</span>
+<span id="cb14-91"><a href="#cb14-91"></a></span>
+<span id="cb14-92"><a href="#cb14-92"></a>    <span class="co"># Extract and filter temperature and humidity data frames</span></span>
+<span id="cb14-93"><a href="#cb14-93"></a>    temp_df <span class="ot">&lt;-</span> <span class="fu">extract_and_filter</span>(plot_data<span class="sc">$</span>temperature, <span class="st">"temperature"</span>, sd, ed)</span>
+<span id="cb14-94"><a href="#cb14-94"></a>    hum_df <span class="ot">&lt;-</span> <span class="fu">extract_and_filter</span>(plot_data<span class="sc">$</span>humidity, <span class="st">"humidity"</span>, sd, ed)</span>
+<span id="cb14-95"><a href="#cb14-95"></a></span>
+<span id="cb14-96"><a href="#cb14-96"></a>    </span>
+<span id="cb14-97"><a href="#cb14-97"></a>    <span class="co"># Merge temperature and humidity by date_time and metadata columns</span></span>
+<span id="cb14-98"><a href="#cb14-98"></a>    merged_df <span class="ot">&lt;-</span> <span class="fu">full_join</span>(temp_df, hum_df,</span>
+<span id="cb14-99"><a href="#cb14-99"></a>                          <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"plot_number"</span>, <span class="st">"date_time"</span>,</span>
+<span id="cb14-100"><a href="#cb14-100"></a>                                 <span class="st">"device_number"</span>, <span class="st">"mission_start"</span>,</span>
+<span id="cb14-101"><a href="#cb14-101"></a>                                 <span class="st">"user_start"</span>, <span class="st">"user_end"</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb14-102"><a href="#cb14-102"></a>      <span class="fu">select</span>(plot_number, device_number, date_time,</span>
+<span id="cb14-103"><a href="#cb14-103"></a>             temperature, humidity, <span class="fu">everything</span>())</span>
+<span id="cb14-104"><a href="#cb14-104"></a>    </span>
+<span id="cb14-105"><a href="#cb14-105"></a>    <span class="fu">return</span>(merged_df)</span>
+<span id="cb14-106"><a href="#cb14-106"></a>    }</span>
+<span id="cb14-107"><a href="#cb14-107"></a>    </span>
+<span id="cb14-108"><a href="#cb14-108"></a></span>
+<span id="cb14-109"><a href="#cb14-109"></a>  plots <span class="ot">&lt;-</span> <span class="fu">names</span>(data)</span>
+<span id="cb14-110"><a href="#cb14-110"></a></span>
+<span id="cb14-111"><a href="#cb14-111"></a>  <span class="co"># Wrangle all iButton data from main dataframe</span></span>
+<span id="cb14-112"><a href="#cb14-112"></a>  <span class="cf">if</span> (<span class="fu">all</span>(<span class="fu">grepl</span>(<span class="st">"plot_"</span>, plots))) {</span>
+<span id="cb14-113"><a href="#cb14-113"></a>    </span>
+<span id="cb14-114"><a href="#cb14-114"></a>    <span class="co"># If multiple plots, return list of filtered data by plot</span></span>
+<span id="cb14-115"><a href="#cb14-115"></a>    result <span class="ot">&lt;-</span> purrr<span class="sc">::</span><span class="fu">map2</span>(data, plots, <span class="sc">~</span><span class="fu">filter_plot</span>(.x, .y, start_date, end_date))</span>
+<span id="cb14-116"><a href="#cb14-116"></a>    <span class="cf">if</span> (bind_rows) {</span>
+<span id="cb14-117"><a href="#cb14-117"></a>      result <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(result)</span>
+<span id="cb14-118"><a href="#cb14-118"></a>    }</span>
+<span id="cb14-119"><a href="#cb14-119"></a>    <span class="fu">return</span>(result)</span>
+<span id="cb14-120"><a href="#cb14-120"></a></span>
+<span id="cb14-121"><a href="#cb14-121"></a>    <span class="co"># If a single plot, return filtered data for that plot</span></span>
+<span id="cb14-122"><a href="#cb14-122"></a>  } <span class="cf">else</span> <span class="cf">if</span>((<span class="fu">length</span>(plots) <span class="sc">==</span> <span class="dv">2</span>) <span class="sc">&amp;&amp;</span> <span class="fu">all</span>(data_types <span class="sc">%in%</span> <span class="fu">names</span>(data))) {</span>
+<span id="cb14-123"><a href="#cb14-123"></a>    <span class="fu">return</span>(<span class="fu">filter_plot</span>(data)) </span>
+<span id="cb14-124"><a href="#cb14-124"></a>  } <span class="cf">else</span> {</span>
+<span id="cb14-125"><a href="#cb14-125"></a>      <span class="fu">stop</span>(<span class="st">"Data structure does not match expected plot or plots format"</span>)</span>
+<span id="cb14-126"><a href="#cb14-126"></a>  }</span>
+<span id="cb14-127"><a href="#cb14-127"></a>  </span>
+<span id="cb14-128"><a href="#cb14-128"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<section id="sample-usage-4" class="level3">
+<h3 class="anchored" data-anchor-id="sample-usage-4">Sample usage</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1"></a><span class="co"># Example usage of ibutton_filter_data function</span></span>
+<span id="cb15-2"><a href="#cb15-2"></a>filtered_data <span class="ot">&lt;-</span> <span class="fu">ibutton_filter_data</span>(all_data,</span>
+<span id="cb15-3"><a href="#cb15-3"></a>                    <span class="at">data_types =</span> <span class="fu">c</span>(<span class="st">"temperature"</span>, <span class="st">"humidity"</span>),</span>
+<span id="cb15-4"><a href="#cb15-4"></a>                    <span class="at">start_date =</span> start_dates, <span class="at">end_date =</span> end_dates,</span>
+<span id="cb15-5"><a href="#cb15-5"></a>                    <span class="at">min_temp =</span> <span class="dv">70</span>, <span class="at">max_temp =</span> <span class="dv">80</span>,</span>
+<span id="cb15-6"><a href="#cb15-6"></a>                    <span class="at">min_humidity =</span> <span class="dv">70</span>, <span class="at">max_humidity =</span> <span class="dv">90</span>,</span>
+<span id="cb15-7"><a href="#cb15-7"></a>                    <span class="at">bind_rows =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb15-8"><a href="#cb15-8"></a></span>
+<span id="cb15-9"><a href="#cb15-9"></a><span class="co"># Another example; note that not all arguments are required to run the function</span></span>
+<span id="cb15-10"><a href="#cb15-10"></a>filtered_data <span class="ot">&lt;-</span> <span class="fu">ibutton_filter_data</span>(three_data)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="example-summarize-ibutton-data" class="level3">
+<h3 class="anchored" data-anchor-id="example-summarize-ibutton-data">Example: Summarize iButton Data</h3>
+<p>After using the function <code>ibutton_filter_data</code> to clean the data, you can summarize it as needed. For example, you can quickly visualize the humidity data across different plots using a boxplot.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1"></a>plot <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(filtered_data, <span class="fu">aes</span>(<span class="at">x =</span> plot_number, <span class="at">y =</span> humidity)) <span class="sc">+</span></span>
+<span id="cb16-2"><a href="#cb16-2"></a>  <span class="fu">geom_boxplot</span>() <span class="sc">+</span></span>
+<span id="cb16-3"><a href="#cb16-3"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Plot Number"</span>,</span>
+<span id="cb16-4"><a href="#cb16-4"></a>       <span class="at">y =</span> <span class="st">"Relative Humidity (%)"</span>) <span class="sc">+</span></span>
+<span id="cb16-5"><a href="#cb16-5"></a>  <span class="fu">theme_minimal</span>()</span>
+<span id="cb16-6"><a href="#cb16-6"></a>plot</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="ibutton_wrangler_files/figure-html/calculate_some_stats-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+        const codeEl = trigger.previousElementSibling.cloneNode(true);
+        for (const childEl of codeEl.children) {
+          if (isCodeAnnotation(childEl)) {
+            childEl.remove();
+          }
+        }
+        return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

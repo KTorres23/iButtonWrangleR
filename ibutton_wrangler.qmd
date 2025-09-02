@@ -1,21 +1,44 @@
 ---
-title: "iButtonWrangleR: Automate iButton Data Processing"
+title: "iButtonWrangleR: Cleaning up iButtonLink data"
 format: html
+author: Karina Torres
+date: "September 1, 2025"
+toc: true
 ---
 
-iButton data should be stored in folders by their plots. The following convention is used: plot_PLOTNUMBER_DEPLOYDATE_PICKUPDATE The following is an example of a folder name following the convention: plot_1a_0630-0702
+This script contains functions to read, clean, and filter [iButtonLink](https://www.ibuttonlink.com/) data collected specifically from D1923 loggers (other models have not been tested on this code). The functions are designed to handle multiple loggers organized in folders by their respective plots. See the *sample_data* folder for example iButton data files, and the **Sample usage** headers for examples of each function.
 
-**NOTE**: This script was designed for humidity and temperature data. If other data types are present, exercise caution in that they are processed correctly by the functions in this script.
+# How to get started:
+
+1.  Open the script `ibutton_wrangler.qmd` in your preferred IDE (e.g., RStudio, Positron)
+2.  Run all the code blocks associated with the **"FX: ...."** header.
+3.  Run some of the sample code using the provided data to ensure all functions were ran into your environment. Note that some functions rely on others to work (e.g., `ibutton_extract_raw` is called within other functions and `ibutton_filter_data` needs the data read in using one of the reading functions).
+4.  Assuming no errors came up, start working with your own data and modify the functions if needed!
+
+Your iButton data should be stored in folders by their plots. The following convention is used in this script:
+
+-   plot_PLOTNUMBER_DEPLOYDATE_PICKUPDATE
+
+The following is an example of a folder name with the convention described above:
+
+-   plot_1a_0630-0702
+
+::: callout-note
+This script was designed for humidity and temperature data. If other data types are present, exercise caution in that they are processed correctly by the functions in this script.
+:::
 
 # Environment Set-up
 
-```{r setup, include=FALSE}
+```{r}
+#| label: setup
+#| code-line-numbers: true 
+
 
 # Install necessary packages if not already installed
-install.packages(c("pacman", "tidyverse", "readxl", "here"))
-#"MuMIn", "performance", "easystats")
+#options(repos = c(CRAN = "https://cran.r-project.org"))
+#install.packages(c("rmarkdown", "pacman", "tidyverse", "readxl", "here"))
 
-# General packages
+# Load packages
 pacman::p_load(tidyverse, readxl, here)
 
 # Set working directory to project root
@@ -23,7 +46,7 @@ setwd(here())
 
 ```
 
-# FX: Extract Raw Data
+# Internal FX: Extract Raw Data
 
 ***Internal function for running other functions in this script***
 
@@ -36,7 +59,9 @@ setwd(here())
 -   `filepath` is the path to an .xlsx iButton logger file
 -   `folder_name` is an optional argument to specify the folder name (plot name) where the iButton file is located; if NULL, it will not be included in the metadata
 
-```{r function_ibutton_extract_raw}
+```{r}
+#| label: function_ibutton_extract_raw
+#| code-line-numbers: true 
 
 # --- F(x): Wrangle a file of raw iButton data ----
 ibutton_extract_raw <- function(filepath, folder_name = NULL) {
@@ -111,7 +136,7 @@ ibutton_extract_raw <- function(filepath, folder_name = NULL) {
 
 ```
 
-# Read files -----------------------
+# Read files
 
 ## FX: Read Batch of Files
 
@@ -127,7 +152,9 @@ ibutton_extract_raw <- function(filepath, folder_name = NULL) {
 
 -   `auto_list_subfolders` is a logical value to automatically list subfolders within a parent folder (TRUE) or not (FALSE, by default)
 
-```{r function_ibutton_read_batch}
+```{r}
+#| label: function_ibutton_read_batch 
+#| code-line-numbers: true 
 
 # Paths is a vector of folder paths or a single folder path
 ibutton_read_batch <- function(paths_or_parent, auto_list_subfolders = FALSE) {
@@ -226,7 +253,9 @@ ibutton_read_batch <- function(paths_or_parent, auto_list_subfolders = FALSE) {
 
 ### Sample usage
 
-```{r example_ibutton_read_batch}
+```{r}
+#| label: example_ibutton_read_batch 
+#| code-line-numbers: true 
 
 # Example 1: Running a single plot/folder
 # - A string of the path to the single plot/logger
@@ -264,7 +293,9 @@ all_data <- ibutton_read_batch(ibutton_folders, TRUE)
 
 -   `file_path` requires path to an .xlsx iButton logger file
 
-```{r function_ibutton_read_file}
+```{r}
+#| label: function_ibutton_read_file
+#| code-line-numbers: true 
 
 # --- Function: Read a single iButton file 
 ibutton_read_file <- function(file_path) {
@@ -276,7 +307,9 @@ ibutton_read_file <- function(file_path) {
 
 ### Sample usage
 
-```{r example_ibutton_read_file}
+```{r}
+#| label: example_ibutton_read_file
+#| code-line-numbers: true 
 
 # Example usage of read_single_ibutton_file function
 with(ibutton_read_file(here("sample_data", "plot_1a_0630-0702/40000000823D6A41_063025175201_1.xlsx")), {
@@ -302,7 +335,9 @@ single_metadata <- my_data$metadata
 
 -   `file_path` is the path to a CSV file with columns: plot_number, start_date, end_date
 
-```{r function_ibutton_read_datetimes}
+```{r}
+#| label: function_ibutton_read_datetimes 
+#| code-line-numbers: true 
 
 # --- F(x): Read start and end dates for filtering iButton data ---
 ibutton_read_datetimes <- function(file_path) {
@@ -326,7 +361,9 @@ ibutton_read_datetimes <- function(file_path) {
 
 ### Sample usage
 
-```{r example_ibutton_read_datetimes}
+```{r}
+#| label: example_ibutton_read_datetimes
+#| code-line-numbers: true 
 
 # Example usage of ibutton_read_datetimes function
 user_dates <- ibutton_read_datetimes("date_ranges.csv")
@@ -346,7 +383,7 @@ end_dates = list(
 
 ```
 
-# View data -----------------------
+# View data
 
 ## FX: View iButton Metadata
 
@@ -362,7 +399,9 @@ end_dates = list(
     -   `name` is the name of the folder/plot/logger that needs to be viewed
     -   `multiple` should be set to TRUE
 
-```{r function_ibutton_view_metadata}
+```{r}
+#| label: function_ibutton_view_metadata
+#| code-line-numbers: true 
 
 # --- F(x): View iButton metadata ---
 ibutton_view_metadata <- function(data, data_type = NULL,
@@ -398,7 +437,9 @@ ibutton_view_metadata <- function(data, data_type = NULL,
 
 ### Sample usage
 
-```{r example_ibutton_view_metadata}
+```{r}
+#| label: example_ibutton_view_metadata
+#| code-line-numbers: true 
 
 # Example usage of ibutton_view_metadata function
 
@@ -414,7 +455,7 @@ ibutton_view_metadata(data = one_data, data_type = "humidity",
 
 ```
 
-# Filter data -----------------------
+# Filter data
 
 ## FX: Filter iButton Data
 
@@ -431,7 +472,9 @@ ibutton_view_metadata(data = one_data, data_type = "humidity",
 -   `min_humidity` & `max_humidity` are numeric values for filtering humidity (0-100 by default)
 -   `bind_rows` is a logical value to combine all data into a single data frame (TRUE by default) or return a list of data frames by plot (FALSE)
 
-```{r function_ibutton_filter_data}
+```{r}
+#| label: function_ibutton_filter_data 
+#| code-line-numbers: true 
 
 # --- F(x): Filter iButton data ---
 ibutton_filter_data <- function(data, data_types = c("temperature", "humidity"),
@@ -567,7 +610,9 @@ ibutton_filter_data <- function(data, data_types = c("temperature", "humidity"),
 
 ### Sample usage
 
-```{r example_ibutton_filter_data}
+```{r}
+#| label: example_ibutton_filter_data
+#| code-line-numbers: true 
 
 # Example usage of ibutton_filter_data function
 filtered_data <- ibutton_filter_data(all_data,
@@ -582,11 +627,13 @@ filtered_data <- ibutton_filter_data(three_data)
 
 ```
 
-### EXAMPLE: Summarize iButton Data
+### Example: Summarize iButton Data
 
 After using the function `ibutton_filter_data` to clean the data, you can summarize it as needed. For example, you can quickly visualize the humidity data across different plots using a boxplot.
 
-```{r calculate_some_stats}
+```{r}
+#| label: calculate_some_stats
+#| code-line-numbers: true 
 
 plot <- ggplot(filtered_data, aes(x = plot_number, y = humidity)) +
   geom_boxplot() +
